@@ -1,38 +1,90 @@
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import funcionesService from "../api/funciones.js";
+import FondosActivosSection from "./components/FondosActivosSection.jsx";
+import estadisticasService from "../api/estadisticas.js";
+import { useState, useEffect } from "react";
+
+// **** Importa tu componente Spinner específico para esta página ****
+import { Spinner } from "@/components/ui/spinner";
+
 import {
   BarChart3,
-  FileText,
   FolderPlus,
   PenTool,
   Plus,
-  Settings,
-  TrendingUp,
-  Users,
   ArrowRight,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  Calendar,
-  Target,
-  Zap,
-  FileDown,
+  ContactRound,
+  FolderOpen,
+  FolderCheck,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 
+// Mantienes el useError, pero NO usarás useLoading aquí.
+import { useError } from "@/contexts/ErrorContext";
+
 export default function HomePage() {
   const navigate = useNavigate();
+  const [proyectosCrudosData, setProyectosCrudosData] = useState([]);
+  const [proyectosProfesorData, setProyectosProfesorData] = useState([]);
+  // **** Vuelve a usar useState local para `loading` ****
+  const [loading, setLoading] = useState(true); // Inicia en true para mostrar el spinner al cargar
+  // Mantienes el uso del hook de error global
+  const { setError } = useError();
 
-  // Datos simulados
+  // Las variables calculadas se mantienen igual
+  const proyectosEnCartera = Array.isArray(proyectosCrudosData)
+    ? proyectosCrudosData.length
+    : 0;
+
+  const postuladosCount = Array.isArray(proyectosCrudosData)
+    ? proyectosCrudosData.filter((p) => p.estatus === "Postulado").length
+    : 0;
+
+  const perfiladosCount = Array.isArray(proyectosCrudosData)
+    ? proyectosCrudosData.filter((p) => p.estatus === "Perfilado").length
+    : 0;
+
+  const fetchData = async () => {
+    // Aquí el `setLoading(true)` es el local de este componente
+    setLoading(true);
+    // Limpia el error global antes de la nueva petición
+    setError(null);
+    try {
+      const projectsResponse =
+        await funcionesService.getDataInterseccionProyectos();
+      const profProjectsResponse =
+        await estadisticasService.getAcademicosPorUnidad();
+      console.log("projectsResponse:", projectsResponse);
+
+      setProyectosCrudosData(
+        Array.isArray(projectsResponse) ? projectsResponse : []
+      );
+      setProyectosProfesorData(
+        Array.isArray(profProjectsResponse) ? profProjectsResponse : []
+      );
+    } catch (e) {
+      console.error("Error fetching data for dashboard summary:", e);
+      // Muestra el error globalmente a través del contexto
+      setError(e.message || "Error desconocido al cargar los datos.");
+    } finally {
+      // Aquí el `setLoading(false)` es el local de este componente
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // ... (Resto de tus datos simulados y JSX)
   const estadisticas = {
     totalProyectos: 24,
-    proyectosActivos: 12, // estatus activo
-    proyectosCompletados: 8, // estatus completado
-    enRevision: 4, // estatus en revisión
-    montoTotal: 2450000, // suma de montos de proyectos
-    fondosDisponibles: 3, // fondos con fecha de cierre futura
+    proyectosActivos: 12,
+    proyectosCompletados: 8,
+    enRevision: 4,
+    montoTotal: 2450000,
+    fondosDisponibles: 3,
   };
 
   const proyectosRecientes = [
@@ -111,64 +163,89 @@ export default function HomePage() {
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Testing</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Centro de Control de Proyectos
+          </h1>
           <p className="text-gray-600">
             Gestiona y monitorea todos tus proyectos desde un solo lugar
           </p>
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - Los divs que contendrán los spinners */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Tarjeta de Total Proyectos */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
                   Total Proyectos
                 </p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {estadisticas.totalProyectos}
-                </p>
+                {loading ? (
+                  // **** Spinner para Total Proyectos ****
+                  <div className="flex justify-center items-center h-8">
+                    <Spinner size={24} className="text-[#2E5C8A]" />
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900">
+                    {proyectosEnCartera}
+                  </p>
+                )}
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FolderPlus className="w-6 h-6 text-[#2E5C8A]" />
+                <FolderOpen className="w-6 h-6 text-[#2E5C8A]" />
               </div>
             </div>
           </div>
 
+          {/* Tarjeta de Postulados */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Completados</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {estadisticas.proyectosCompletados}
-                </p>
+                <p className="text-sm font-medium text-gray-600">Postulados</p>
+                {loading ? (
+                  // **** Spinner para Postulados ****
+                  <div className="flex justify-center items-center h-8">
+                    <Spinner size={24} className="text-green-600" />
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900">
+                    {postuladosCount}
+                  </p>
+                )}
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+                <FolderCheck className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </div>
 
+          {/* Tarjeta de Perfilados */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">En Progreso</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {estadisticas.proyectosActivos}
-                </p>
+                <p className="text-sm font-medium text-gray-600">Perfilados</p>
+                {loading ? (
+                  // **** Spinner para Perfilados ****
+                  <div className="flex justify-center items-center h-8">
+                    <Spinner size={24} className="text-purple-600" />
+                  </div>
+                ) : (
+                  <p className="text-2xl font-bold text-gray-900">
+                    {perfiladosCount}
+                  </p>
+                )}
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-yellow-600" />
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <ContactRound className="w-6 h-6 text-purple-600" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Action Areas */}
+        {/* Main Action Areas (Se mantienen igual) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {/* Left Column - Primary Actions */}
           <div className="lg:col-span-2 space-y-6">
@@ -258,67 +335,8 @@ export default function HomePage() {
 
           {/* Right Column - Secondary Info */}
           <div className="space-y-6">
-            {/* Notifications */}
-            {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Notificaciones
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Revisión pendiente
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Proyecto Sistema de Gestión
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Proyecto completado
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      App Mobile finalizada
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div> */}
             {/* Fondos Activos */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Fondos Activos
-                </h3>
-              </div>
-              <div className="p-4 space-y-4">
-                {fondosActivos.map((fondo) => (
-                  <div
-                    key={fondo.id}
-                    className="border border-gray-200 rounded-lg p-4"
-                  >
-                    <h4 className="font-medium text-gray-900 text-sm">
-                      {fondo.nombre}
-                    </h4>
-                    <p className="text-xs text-gray-600 mt-1">
-                      {fondo.institucion}
-                    </p>
-                    <div className="mt-2 space-y-1">
-                      <p className="text-xs text-gray-500">
-                        Cierre: {new Date(fondo.cierre).toLocaleDateString()}
-                      </p>
-                      <p className="text-xs font-medium text-green-600">
-                        {fondo.financiamiento}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <FondosActivosSection />
           </div>
         </div>
       </main>

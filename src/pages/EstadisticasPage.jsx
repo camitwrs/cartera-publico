@@ -678,10 +678,10 @@ export default function EstadisticasPage() {
             </div>
           </div>
 
-          {/* Proyectos por Institución */}
+          {/* Proyectos por Convocatoria */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h4 className="text-lg font-semibold text-gray-900 mb-4">
-              Proyectos por Institución
+              Proyectos por Convocatoria
             </h4>
             <div className="h-80 flex items-center justify-center">
               {filteredProyectosPorInstitucion.length > 0 ? (

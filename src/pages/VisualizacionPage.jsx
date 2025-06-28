@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { exportarPDF, exportarExcel } from "../lib/utils";
+import { useState } from "react"; // Todavía necesitamos useState para otros fines
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +12,7 @@ import {
 import {
   Card,
   CardContent,
-  CardFooter,
+  CardFooter, // CardFooter ya no se usará, pero lo mantengo en el import por si lo usas en otro lado
   CardHeader,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,15 +22,16 @@ import {
   ChevronRight,
   ChevronDown,
   FileDown,
-  Clock,
+  Clock, // Mantengo Clock si lo usas para otra cosa
   DollarSign,
   Users,
   Tag,
   ArrowDownWideNarrow,
   ArrowUpWideNarrow,
+  Calendar, // Necesitaremos Calendar para "Fecha de registro"
 } from "lucide-react";
 
-// Datos de ejemplo para los proyectos
+// Datos de ejemplo para los proyectos (sin lastUpdate, ya que no estaba en tu referencia de card expandida)
 const projects = [
   {
     id: 1,
@@ -39,7 +39,7 @@ const projects = [
     status: "Postulado",
     theme: "Economía Circular",
     academicUnit: "Escuela de Ingeniería Civil",
-    leader: "Álvaro Díaz",
+    leader: "ÁLVARO DÍAZ",
     amount: "$246.000.000",
     supportType: "Total (Total)",
     applicationDate: "17 de mayo de 2025",
@@ -53,7 +53,7 @@ const projects = [
     status: "Postulado",
     theme: "Economía Circular",
     academicUnit: "Escuela de Ingeniería Química",
-    leader: "Carlos Javier Carlesi",
+    leader: "CARLOS JAVIER CARLESI",
     amount: "$30.000.000",
     supportType: "Parcial (Formulación y Postulación)",
     applicationDate: "30 de abril de 2025",
@@ -66,7 +66,7 @@ const projects = [
     status: "Postulado",
     theme: "Interdisciplina",
     academicUnit: "Facultad de Ingeniería",
-    leader: "Sebastián Carlos Fingerhuth",
+    leader: "SEBASTIÁN CARLOS FINGERHUTH",
     amount: "$259.000.000",
     supportType: "Total (Total)",
     applicationDate: "24 de abril de 2025",
@@ -80,7 +80,7 @@ const projects = [
     status: "Postulado",
     theme: "Hidrógeno",
     academicUnit: "Facultad de Ingeniería",
-    leader: "Sebastián Carlos Fingerhuth",
+    leader: "SEBASTIÁN CARLOS FINGERHUTH",
     amount: "No especificado",
     supportType: "Total (Total)",
     applicationDate: "6 de abril de 2025",
@@ -89,85 +89,72 @@ const projects = [
   },
 ];
 
-// Componente para la tarjeta de proyecto
+// Componente para la tarjeta de proyecto - MODIFICADO
 function ProjectCard({ project }) {
-  const [expanded, setExpanded] = useState(false);
+  // Ya no necesitamos 'expanded' aquí
+  // const [expanded, setExpanded] = useState(false);
 
   return (
     <Card className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
       <CardHeader className="bg-gradient-to-r from-[#2E5C8A] to-[#3A6FA7] p-4 min-h-[96px] flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white line-clamp-2 pr-4 flex-grow">
+        <h3 className="text-lg font-semibold text-white  pr-4 flex-grow">
           {project.title}
         </h3>
         <Badge className="bg-blue-200 text-blue-800 hover:bg-blue-200 whitespace-nowrap self-start">
           {project.status}
         </Badge>
       </CardHeader>
-      {/* Información esencial siempre visible (Contenido Central) */}
-      {/* min-h-[Xpx] o flex-grow para empujar el footer de la card */}
-      <CardContent className="p-4 pb-0 flex-grow flex flex-col justify-between">
-        {" "}
-        {/* Añadido flex-grow, flex flex-col justify-between */}
-        <div className="flex flex-col space-y-3">
+      {/* Información esencial siempre visible (Contenido Central) - MODIFICADO */}
+      {/* Ahora todo va aquí y se distribuye en un grid */}
+      <CardContent className="p-4 flex-grow">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-4">
+          {/* Líder y Unidad Académica */}
           <div className="flex items-center">
-            <Users className="w-4 h-4 text-gray-500 mr-2" />
+            <Users className="w-4 h-4 text-gray-500 mr-2 shrink-0" />
             <div>
-              <p className="text-sm font-medium">{project.leader}</p>
-              <p className="text-xs text-gray-500">{project.academicUnit}</p>
+              <p className="text-sm font-medium text-gray-900 ">
+                {project.leader}
+              </p>
+              <p className="text-xs text-gray-500 ">{project.academicUnit}</p>
             </div>
           </div>
 
+          {/* Monto y Tipo de Apoyo */}
           <div className="flex items-center">
-            <DollarSign className="w-4 h-4 text-gray-500 mr-2" />
+            <DollarSign className="w-4 h-4 text-gray-500 mr-2 shrink-0" />
             <div>
-              <p className="text-sm font-medium">{project.amount}</p>
-              <p className="text-xs text-gray-500">{project.supportType}</p>
+              <p className="text-sm font-medium text-gray-900 ">
+                {project.amount}
+              </p>
+              <p className="text-xs text-gray-500 ">{project.supportType}</p>
             </div>
           </div>
 
+          {/* Fecha de Registro (anteriormente "Fecha de postulación") */}
           <div className="flex items-center">
-            <Tag className="w-4 h-4 text-gray-500 mr-2" />
-            <p className="text-sm">{project.theme}</p>
+            <Calendar className="w-4 h-4 text-gray-500 mr-2 shrink-0" />
+            <p className="text-sm text-gray-900 ">{project.applicationDate}</p>
+          </div>
+
+          {/* Convocatoria */}
+          <div className="flex items-center">
+            <ChevronRight className="w-4 h-4 text-gray-500 mr-2 shrink-0" />{" "}
+            {/* O un icono de documento/bandera */}
+            <p className="text-sm text-gray-900 ">{project.call}</p>
+          </div>
+
+          {/* Temática (mantengo en una fila separada o al final si es necesario) */}
+          <div className="flex items-center md:col-span-2">
+            {" "}
+            {/* Ocupa todo el ancho en md */}
+            <Tag className="w-4 h-4 text-gray-500 mr-2 shrink-0" />
+            <p className="text-sm text-gray-900 ">{project.theme}</p>
           </div>
         </div>
+        {/* Los comentarios ya no se muestran por defecto para mantener la tarjeta compacta */}
+        {/* Si los quieres, deberías decidir dónde ubicarlos o si es un tooltip al hover */}
       </CardContent>
-      {/* Información expandible (Parte Dinámica - La que causaba la irregularidad) */}
-      {expanded && (
-        <CardContent className="p-0 border-t border-gray-100 mt-3">
-          <div className="grid grid-cols-1 divide-y divide-gray-100">
-            <div className="p-4">
-              <p className="text-sm text-gray-500 mb-1">Fecha de registro</p>
-              <p className="text-sm">{project.applicationDate}</p>
-            </div>
-
-            <div className="p-4">
-              <p className="text-sm text-gray-500 mb-1">Convocatoria</p>
-              <p className="text-sm">{project.call}</p>
-            </div>
-
-            {project.comments && project.comments !== "-" && (
-              <div className="p-4 bg-gray-50">
-                <p className="text-sm text-gray-500 mb-1">Comentarios</p>
-                <p className="text-sm">{project.comments}</p>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      )}
-      {/* Footer de la tarjeta con el botón "Ver más/menos" */}
-      <CardFooter className="flex justify-between p-4 bg-gray-50 border-t border-gray-100">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-gray-600 hover:text-[#2E5C8A]"
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? "Ver menos" : "Ver más"}
-          <ChevronDown
-            className={`w-4 h-4 ml-1 transition-transform ${expanded ? "rotate-180" : ""}`}
-          />
-        </Button>
-      </CardFooter>
+      {/* Eliminado CardFooter, ya no hay botón de expandir */}
     </Card>
   );
 }

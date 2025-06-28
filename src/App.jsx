@@ -1,4 +1,3 @@
-// App.js
 import {
   BrowserRouter as Router,
   Routes,
@@ -16,8 +15,12 @@ import VisualizacionPage from "./pages/VisualizacionPage";
 import EstadisticasPage from "./pages/EstadisticasPage";
 import FondosPage from "./pages/FondosPage";
 import FormulariosPage from "./pages/FormulariosPage";
-import AnadirProyectosPage from "./pages/AnadirProyectosPage"; // ¡Atención al nombre de archivo!
-import EditarProyectosPage from "./pages/EditarProyectosPage"; // ¡Atención al nombre de archivo!
+import AnadirProyectosPage from "./pages/AnadirProyectosPage";
+import EditarProyectosPage from "./pages/EditarProyectosPage";
+
+// **** Importa tus Providers de contexto ****
+import { LoadingProvider } from "./contexts/LoadingContext";
+import { ErrorProvider } from "./contexts/ErrorContext";
 
 // --- Componente principal de la aplicación
 function AppContent() {
@@ -116,10 +119,17 @@ function AppContent() {
   );
 }
 
+// Envuelve todo el contenido de la aplicación con los Context Providers
 export default function App() {
   return (
     <Router>
-      <AppContent />
+      <ErrorProvider>
+        {" "}
+        {/* Envuelve con ErrorProvider primero para que errores de LoadingProvider se muestren */}
+        <LoadingProvider>
+          <AppContent />
+        </LoadingProvider>
+      </ErrorProvider>
     </Router>
   );
 }

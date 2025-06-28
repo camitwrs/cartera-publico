@@ -139,7 +139,7 @@ export default function AnadirProyectosPage() {
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <Label
                   htmlFor="comments"
                   className="text-sm font-medium text-gray-700"
@@ -155,7 +155,7 @@ export default function AnadirProyectosPage() {
                   }
                   className="mt-1 min-h-[100px]"
                 />
-              </div>
+              </div> */}
 
               <div>
                 <Label
