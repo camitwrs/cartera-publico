@@ -1,5 +1,4 @@
-// src/pages/VisualizacionPage.jsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge"; // Shadcn Badge
@@ -28,198 +27,38 @@ import {
   Pickaxe,
   Dna,
   BatteryCharging,
+  GraduationCap, // Icono para Académicos Involucrados
+  ClipboardList, // Icono para Detalles del Proyecto
+  Banknote, // Icono para Monto solicitado
 } from "lucide-react";
+
+// Componentes de Shadcn UI para el modal (Dialog)
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription, // Puede que no necesitemos DialogDescription
+  DialogHeader,
+  DialogTitle,
+  // DialogTrigger no se usará directamente en el botón de la Card
+} from "@/components/ui/dialog";
 
 import { Spinner } from "@/components/ui/spinner";
 import funcionesService from "../api/funciones.js";
+import academicosService from "../api/academicos.js"; // Necesario para getFotosPorAcademico
 import { useError } from "@/contexts/ErrorContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Importaciones de logos
-import anidLogo from "../assets/tipos_convocatorias/anid_rojo_azul.png";
-import corfoLogo from "../assets/tipos_convocatorias/corfo2024.png";
-import goreLogo from "../assets/tipos_convocatorias/gore-valpo.jpg";
-import sqmLogo from "../assets/instituciones/sqm.png";
-import codesserLogo from "../assets/instituciones/logo-codesser2.png";
-
-// Mapeo de INSTITUCIONES a sus logos
-const INSTITUCION_LOGOS = {
-  ANID: anidLogo,
-  CORFO: corfoLogo,
-  "GORE-Valparaíso": goreLogo, // Asegúrate de que este nombre coincide si viene así en 'institucion'
-  SQM: sqmLogo,
-  CODESSER: codesserLogo,
-};
-
-// Componente ProjectCard
-function ProjectCard({ project, academicosDelProyecto }) {
-  const renderInstitucionLogo = (nombreInstitucion) => {
-    const logoSrc = INSTITUCION_LOGOS[nombreInstitucion];
-    if (logoSrc) {
-      return (
-        <img
-          src={logoSrc}
-          alt={`${nombreInstitucion} Logo`}
-          className="h-5 w-5 object-contain rounded-full border border-gray-200"
-        />
-      );
-    } else if (
-      nombreInstitucion === "PRIVADA" ||
-      nombreInstitucion === "CODESSER" ||
-      nombreInstitucion === "SQM"
-    ) {
-      return (
-        <div className="h-5 w-5 flex items-center justify-center bg-gray-200 rounded-full text-gray-700 text-[0.7rem] font-bold flex-shrink-0">
-          {nombreInstitucion === "PRIVADA"
-            ? "PRIV"
-            : nombreInstitucion.substring(0, 4).toUpperCase()}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const getThematicBadge = (tematica) => {
-    const baseClasses =
-      "flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium";
-    let icon = <Tag className="h-4 w-4" />;
-    let colorClasses = "bg-gray-100 text-gray-700";
-
-    switch (tematica) {
-      case "Almacenamiento Energía":
-        icon = <Zap className="h-4 w-4" />;
-        colorClasses = "bg-teal-100 text-teal-700";
-        break;
-      case "Hidrógeno":
-        icon = <FlaskRound className="h-6 w-6" />;
-        colorClasses = "bg-cyan-100 text-cyan-700";
-        break;
-      case "Contaminación Lumínica":
-        icon = <Lightbulb className="h-4 w-4" />;
-        colorClasses = "bg-yellow-100 text-yellow-700";
-        break;
-      case "Minería":
-        icon = <Pickaxe className="h-4 w-4" />;
-        colorClasses = "bg-orange-100 text-orange-700";
-        break;
-      case "Biotecnología":
-        icon = <Dna className="h-4 w-4" />;
-        colorClasses = "bg-purple-100 text-purple-700";
-        break;
-      case "Litio":
-        icon = <BatteryCharging className="h-4 w-4" />;
-        colorClasses = "bg-slate-100 text-slate-700";
-        break;
-      default:
-        icon = <Tag className="h-4 w-4" />;
-        colorClasses = "bg-gray-100 text-gray-700";
-        break;
-    }
-    return (
-      <Badge className={`${baseClasses} ${colorClasses}`}>
-        {icon} {tematica}
-      </Badge>
-    );
-  };
-
-  // getStatusBadge: Retorna el Badge de estatus (sin iconos, solo texto)
-  const getStatusBadge = (estatus) => {
-    // Clases base para el badge de estatus
-    const baseClasses =
-      "px-2.5 py-1 rounded-full text-s font-medium font-semibold whitespace-nowrap flex-shrink-0";
-    let colorClasses = "";
-
-    switch (estatus) {
-      case "Postulado":
-        colorClasses = "bg-blue-100 text-blue-700 border-blue-200";
-        break;
-      case "Perfil": // Asegúrate de que el valor del estatus es "Perfilado" y no "Perfil"
-        colorClasses = "bg-yellow-100 text-yellow-700 border-yellow-200";
-        break;
-      case "Adjudicado":
-        colorClasses = "bg-green-100 text-green-700 border-green-200";
-        break;
-      default:
-        colorClasses = "bg-gray-100 text-gray-700 border-gray-200";
-        break;
-    }
-    return (
-      <Badge className={`${baseClasses} ${colorClasses}`}>
-        <span>{estatus}</span>
-      </Badge>
-    );
-  };
-
-  const formatDateShort = (dateString) => {
-    if (!dateString) return "Sin fecha";
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date)) return "Fecha Inválida";
-      const options = { month: "short", year: "numeric" };
-      let formatted = date.toLocaleDateString("es-CL", options);
-      formatted = formatted.replace(".", "");
-      return formatted;
-    } catch (e) {
-      console.warn(
-        "Invalid date string for ProjectCard (short format):",
-        dateString,
-        e
-      );
-      return "Fecha Inválida";
-    }
-  };
-
-  // Nombres de los académicos para mostrar
-  const academicosNames =
-    academicosDelProyecto && Array.isArray(academicosDelProyecto.profesores)
-      ? academicosDelProyecto.profesores
-          .map((p) => p.nombre_completo)
-          .join(", ")
-      : "N/A";
-
-  return (
-    <Card className="relative flex flex-col bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden h-full">
-      <CardHeader className="bg-gradient-to-r from-[#2E5C8A] to-[#3A6FA7] p-4 flex-shrink-0">
-        <div className="flex justify-between items-start">
-          <h3 className="text-lg font-semibold text-white leading-tight pr-4 flex-grow line-clamp-2">
-            {project.nombre || "Nombre no disponible"}
-          </h3>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 mt-2">
-          {getThematicBadge(project.tematica)}
-          {project.institucion && (
-            <Badge className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
-              {renderInstitucionLogo(project.institucion)}
-              <span>{project.institucion}</span>
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="flex-grow p-4">
-        {/* Líder / Profesores */}
-        <div className="flex items-center text-gray-700 text-sm mb-2">
-          <Users className="h-4 w-4 mr-2 text-gray-500" />
-          <p>{academicosNames}</p> {/* Muestra los nombres de los académicos */}
-        </div>
-        {/* Fecha de Postulación */}
-        <div className="flex items-center text-gray-700 text-sm">
-          <Calendar className="h-4 w-4 mr-2 text-gray-500" />
-          <p>{formatDateShort(project.fecha_postulacion)}</p>
-        </div>
-        {/* Badge en esquina inferior derecha */}
-        <div className="absolute bottom-4 right-4">
-          {getStatusBadge(project.estatus)}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// Importar ProjectCard desde su nuevo archivo
+import ProjectCard, {
+  getStatusBadge,
+  getThematicBadge,
+  renderInstitucionLogo,
+} from "./components/ProjectCard.jsx";
 
 export default function VisualizacionPage() {
   const [orden, setOrden] = useState("reciente");
-  const [projectsData, setProjectsData] = useState([]); // Todos los proyectos sin filtrar
-  const [selectedStatus, setSelectedStatus] = useState("todos"); // 'todos', 'Postulado', 'Adjudicado', 'Perfilado'
+  const [projectsData, setProjectsData] = useState([]);
+  const [selectedStatus, setSelectedStatus] = useState("todos");
   const [academicosMap, setAcademicosMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [errorLocal, setErrorLocal] = useState(null);
@@ -232,6 +71,110 @@ export default function VisualizacionPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
+
+  // **** Estados para el Modal de Detalles ****
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [academicosFotos, setAcademicosFotos] = useState([]); // Fotos de académicos del proyecto seleccionado
+  const academicosFotosCache = useRef({});
+  const [loadingFotos, setLoadingFotos] = useState(false); // Estado de carga para las fotos
+
+  // Helper para formatear fecha a "31 de diciembre de 2024" para el modal
+  const formatDateFull = useCallback((dateString) => {
+    if (!dateString) return "Sin fecha";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date)) return "Fecha Inválida";
+      const options = { year: "numeric", month: "long", day: "numeric" };
+      return date.toLocaleDateString("es-CL", options);
+    } catch (e) {
+      console.warn(
+        "Invalid date string for modal (full format):",
+        dateString,
+        e
+      );
+      return "Fecha Inválida";
+    }
+  }, []);
+
+  // Función para abrir el modal y cargar fotos
+  const handleCardClick = useCallback(
+    async (project) => {
+      setSelectedProject(project);
+      setIsModalOpen(true);
+      setLoadingFotos(true); // Iniciar carga de fotos
+      setAcademicosFotos([]); // Limpiar fotos anteriores
+
+      // Obtener los IDs de los académicos de este proyecto
+      const academicosEnProyecto =
+        academicosMap[project.id_proyecto]?.profesores || [];
+      const academicosIds = academicosEnProyecto.map((p) => p.id_academico); // Extraer solo los IDs\
+
+      const FALLBACK_PHOTO_URL =
+        "https://t4.ftcdn.net/jpg/01/86/29/31/360_F_186293166_P4yk3uXQBDapbDFlR17ivpM6B1ux0fHG.jpg"; // Tu URL de placeholder
+
+      const photosToLoad = {};
+      const promisesToMake = [];
+      const idsToFetch = []; // IDs que realmente necesitamos solicitar a la API
+      // 1. Revisar caché para cada académico
+      academicosIds.forEach((id) => {
+        if (academicosFotosCache.current[id]) {
+          // Si ya está en caché, usar la versión cacheada
+          photosToLoad[id] = academicosFotosCache.current[id];
+        } else {
+          // Si no está en caché, añadir a la lista para solicitar
+          idsToFetch.push(id);
+          promisesToMake.push(academicosService.getFotosPorAcademico(id));
+        }
+      });
+
+      setAcademicosFotos(photosToLoad); // Mostrar las fotos cacheada inmediatamente
+      // Solo mostrar spinner si hay fotos nuevas por cargar
+      setLoadingFotos(idsToFetch.length > 0);
+      // 2. Si hay fotos que cargar de la API
+      if (idsToFetch.length > 0) {
+        try {
+          const fotosResponses = await Promise.all(promisesToMake);
+          fotosResponses.forEach((responseArray, index) => {
+            const academicoId = idsToFetch[index]; // El ID del académico para esta respuesta
+            const photoLink =
+              responseArray && responseArray.length > 0 && responseArray[0].link
+                ? responseArray[0].link
+                : null;
+            if (photoLink) {
+              photosToLoad[academicoId] = photoLink;
+              academicosFotosCache.current[academicoId] = photoLink; // Guardar en caché
+            } else {
+              photosToLoad[academicoId] = FALLBACK_PHOTO_URL;
+              academicosFotosCache.current[academicoId] = FALLBACK_PHOTO_URL; // Guardar placeholder en caché
+            }
+          });
+          setAcademicosFotos(photosToLoad); // Actualizar el estado con las nuevas fotos
+        } catch (err) {
+          console.error("Error fetching academic photos:", err);
+          setErrorGlobal("Error al cargar las fotos de los académicos.");
+          // En caso de error, llenar con placeholders y guardar en caché el placeholder
+          idsToFetch.forEach((id) => {
+            photosToLoad[id] = FALLBACK_PHOTO_URL;
+            academicosFotosCache.current[id] = FALLBACK_PHOTO_URL;
+          });
+          setAcademicosFotos(photosToLoad);
+        } finally {
+          setLoadingFotos(false);
+        }
+      } else {
+        // No había fotos que cargar, simplemente quitamos el spinner si estaba
+        setLoadingFotos(false);
+      }
+
+      // Si no hay IDs de académicos en el proyecto, asegurar que el estado de fotos esté vacío y no muestre spinner
+      if (academicosIds.length === 0) {
+        setAcademicosFotos({});
+        setLoadingFotos(false);
+      }
+    },
+    [academicosMap, setErrorGlobal, academicosFotosCache] // Añadir academicosFotosCache a las dependencias
+  );
 
   const fetchData = async () => {
     setLoading(true);
@@ -291,25 +234,16 @@ export default function VisualizacionPage() {
 
   // Lógica para filtrar proyectos según el estatus seleccionado
   const filteredProjects = projectsData.filter((project) => {
-    // Filtrar por estatus
     const matchesStatus =
       selectedStatus === "todos" || project.estatus === selectedStatus;
-
-    // Filtro por término de búsqueda (en el nombre del proyecto)
     const matchesSearch =
-      searchTerm === "" || // Si el searchTerm está vacío, no filtra por búsqueda
+      searchTerm === "" ||
       project.nombre.toLowerCase().startsWith(searchTerm.toLowerCase());
-
-    // Nuevo filtro por convocatoria
     const matchesConvocatoria =
       selectedConvocatoria === "todos" ||
-      project.nombre_convo === selectedConvocatoria;
-
-    // Nuevo filtro por temática
+      project.convocatoria === selectedConvocatoria;
     const matchesTematica =
       selectedTematica === "todos" || project.tematica === selectedTematica;
-
-    // Nuevo filtro por institución
     const matchesInstitucion =
       selectedInstitucion === "todos" ||
       project.institucion === selectedInstitucion;
@@ -329,30 +263,29 @@ export default function VisualizacionPage() {
       a.fecha_postulacion && !isNaN(new Date(a.fecha_postulacion));
     const hasDateB =
       b.fecha_postulacion && !isNaN(new Date(b.fecha_postulacion));
-    if (!hasDateA && !hasDateB) return 0; // Ambos sin fecha, mantener orden relativo
-    if (!hasDateA) return orden === "reciente" ? 1 : -1; // A sin fecha, va al final en reciente, al principio en antiguo
-    if (!hasDateB) return orden === "reciente" ? -1 : 1; // B sin fecha, va al final en reciente, al principio en antiguo
+    if (!hasDateA && !hasDateB) return 0;
+    if (!hasDateA) return orden === "reciente" ? 1 : -1;
+    if (!hasDateB) return orden === "reciente" ? -1 : 1;
     const dateA = new Date(a.fecha_postulacion);
-    dateA.setUTCHours(0, 0, 0, 0); // Forzar a medianoche UTC
+    dateA.setUTCHours(0, 0, 0, 0);
     const dateB = new Date(b.fecha_postulacion);
-    dateB.setUTCHours(0, 0, 0, 0); // Forzar a me
+    dateB.setUTCHours(0, 0, 0, 0);
 
     if (orden === "reciente") {
       return dateB.getTime() - dateA.getTime();
     } else {
-      // "antiguo"
       return dateA.getTime() - dateB.getTime();
     }
   });
 
   const totalPages = Math.ceil(sortedProjects.length / itemsPerPage);
 
-  // Asegurarse de que la página actual no exceda el total de páginas (ej. si se filtra y el total disminuye)
+  // Asegurarse de que la página actual no exceda el total de páginas
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     } else if (totalPages === 0 && currentPage !== 1) {
-      setCurrentPage(1); // Volver a la primera página si no hay resultados
+      setCurrentPage(1);
     }
   }, [currentPage, totalPages]);
 
@@ -383,7 +316,7 @@ export default function VisualizacionPage() {
           </p>
         </div>
 
-        {/* Filters and Search (sin cambios) */}
+        {/* Filters and Search */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[220px]">
@@ -541,15 +474,18 @@ export default function VisualizacionPage() {
                 key={project.id_proyecto}
                 project={project}
                 academicosDelProyecto={academicosMap[project.id_proyecto]}
+                onClick={() => handleCardClick(project)}
               />
             ))}
           </div>
         )}
 
-        {/* Pagination (sin cambios) */}
+        {/* Pagination */}
         <div className="flex justify-between items-center bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="text-sm text-gray-500">
-            Mostrando{" "} 
+            Mostrando{" "}
+            {/* Si sortedProjects está vacío, el endIndex podría ser negativo o 0 */}
+            {sortedProjects.length > 0 ? startIndex + 1 : 0} -{" "}
             {Math.min(sortedProjects.length, endIndex)} de{" "}
             {sortedProjects.length} proyectos
           </div>
@@ -590,6 +526,149 @@ export default function VisualizacionPage() {
           </div>
         </div>
       </main>
+
+      {/* **** MODAL DE DETALLES DEL PROYECTO **** */}
+      {selectedProject && ( // Solo renderiza si hay un proyecto seleccionado
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          {/* DialogTrigger no es necesario aquí porque abrimos el modal programáticamente */}
+          <DialogContent className="sm:max-w-[800px] md:max-w-[900px] lg:max-w-[1100px] h-auto max-h-[90vh] overflow-y-auto ">
+            {" "}
+            {/* Ajusta el ancho y altura máximos */}
+            <DialogHeader>
+              {/* Parte superior del modal */}
+              <div className="bg-gradient-to-r from-[#275078] to-[#5296de] p-6 rounded-t-lg">
+                {" "}
+                {/* P-6 para más padding, rounded-t-lg para bordes superiores */}
+                <DialogTitle className="text-2xl font-bold text-white mb-2 leading-tight">
+                  {" "}
+                  {/* Título del modal */}
+                  {selectedProject.nombre}
+                </DialogTitle>
+                <div className="flex justify-between items-center text-sm text-white">
+                  <p>
+                    <span className="font-semibold">Unidad responsable:</span>{" "}
+                    {selectedProject.unidad || "Sin información"}
+                  </p>
+                  {getStatusBadge(selectedProject.estatus || "Sin información")}{" "}
+                  {/* Badge de estatus */}
+                </div>
+              </div>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 p-6">
+              {/* Columna Izquierda: Detalles e Información de Postulación */}
+              <div className="flex flex-col gap-6">
+                {/* Detalles del Proyecto */}
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5 text-[#2E5C8A]" />{" "}
+                    Detalles del Proyecto
+                  </h4>
+                  <div className="flex items-center justify-normal text-sm text-gray-700 mb-1">
+                    {" "}
+                    {/* Usamos justify-between aquí */}
+                    <span className="font-semibold flex-shrink-0 mr-2">
+                      Temática:
+                    </span>{" "}
+                    {/* flex-shrink-0 para que el label no se encoja */}
+                    {getThematicBadge(
+                      selectedProject.tematica || "Sin información"
+                    )}{" "}
+                  </div>
+                  <div className="flex items-center justify-normal text-sm text-gray-700 mb-1">
+                    {" "}
+                    {/* Usamos justify-between aquí */}
+                    <span className="font-semibold flex-shrink-0 mr-4">
+                      Institución:
+                    </span>{" "}
+                    {/* flex-shrink-0 para el label */}
+                    <div className="flex items-center gap-2">
+                      {" "}
+                      <span>
+                        {selectedProject.institucion || "Sin información"}
+                      </span>
+                      {renderInstitucionLogo(selectedProject.institucion || "")}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-1">
+                    <span className="font-semibold">Monto solicitado:</span>{" "}
+                    {selectedProject.monto !== null &&
+                    selectedProject.monto !== undefined
+                      ? `$${selectedProject.monto.toLocaleString("es-CL")}`
+                      : "Sin información"}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Tipo de apoyo:</span>{" "}
+                    {selectedProject.apoyo || "Sin información"}{" "}
+                    {selectedProject.detalle_apoyo &&
+                      `(${selectedProject.detalle_apoyo})`}
+                  </p>
+                </div>
+
+                {/* Información de Postulación */}
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-[#2E5C8A]" /> Información
+                    de Registro
+                  </h4>
+                  <p className="text-sm text-gray-700 mb-1">
+                    <span className="font-semibold">Fecha de registro:</span>{" "}
+                    {formatDateFull(selectedProject.fecha_postulacion)}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Convocatoria:</span>{" "}
+                    {selectedProject.nombre_convo || "Sin información"}{" "}
+                    {selectedProject.convocatoria &&
+                    selectedProject.convocatoria !== ""
+                      ? `(${selectedProject.convocatoria})`
+                      : ""}{" "}
+                    {/* Solo muestra si existe y no es una cadena vacía */}
+                  </p>
+                </div>
+              </div>
+
+              {/* Columna Derecha: Académicos Involucrados */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <GraduationCap className="h-5 w-5 text-[#2E5C8A]" />{" "}
+                  Académicos Involucrados
+                </h4>
+                {loadingFotos ? (
+                  <div className="flex justify-center items-center h-24">
+                    <Spinner size={32} className="text-[#2E5C8A]" />
+                  </div>
+                ) : academicosFotos.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center">
+                    No hay fotos de académicos disponibles.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-y-4">
+                    {" "}
+                    {/* Aumentar columnas para aprovechar espacio */}
+                    {/* Renderizar fotos y nombres */}
+                    {academicosMap[
+                      selectedProject.id_proyecto
+                    ]?.profesores?.map((academico, index) => (
+                      <div
+                        key={academico.id_academico}
+                        className="flex items-center gap-3"
+                      >
+                        <img
+                          src={academicosFotos[academico.id_academico]}
+                          alt={`Foto de ${academico.nombre_completo || "académico"}`} // Alt text descriptivo
+                          className="w-24 h-24 object-cover rounded-full border-2 border-gray-200 flex-shrink-0"
+                        />
+                        <p className="text-sm font-medium text-gray-800 leading-tight">
+                          {academico.nombre_completo}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
