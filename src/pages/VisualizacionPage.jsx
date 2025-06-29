@@ -230,6 +230,9 @@ export default function VisualizacionPage() {
   const [selectedConvocatoria, setSelectedConvocatoria] = useState("todos");
   const [selectedTematica, setSelectedTematica] = useState("todos");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
   const fetchData = async () => {
     setLoading(true);
     setErrorLocal(null);
@@ -341,6 +344,32 @@ export default function VisualizacionPage() {
       return dateA.getTime() - dateB.getTime();
     }
   });
+
+  const totalPages = Math.ceil(sortedProjects.length / itemsPerPage);
+
+  // Asegurarse de que la página actual no exceda el total de páginas (ej. si se filtra y el total disminuye)
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    } else if (totalPages === 0 && currentPage !== 1) {
+      setCurrentPage(1); // Volver a la primera página si no hay resultados
+    }
+  }, [currentPage, totalPages]);
+
+  // Calcular los proyectos de la página actual
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedProjects = sortedProjects.slice(startIndex, endIndex);
+
+  // Función para cambiar de página
+  const handlePageChange = useCallback(
+    (pageNumber) => {
+      if (pageNumber >= 1 && pageNumber <= totalPages) {
+        setCurrentPage(pageNumber);
+      }
+    },
+    [totalPages]
+  );
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
@@ -507,7 +536,7 @@ export default function VisualizacionPage() {
           </Alert>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {sortedProjects.map((project) => (
+            {paginatedProjects.map((project) => (
               <ProjectCard
                 key={project.id_proyecto}
                 project={project}
@@ -520,26 +549,42 @@ export default function VisualizacionPage() {
         {/* Pagination (sin cambios) */}
         <div className="flex justify-between items-center bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="text-sm text-gray-500">
-            Mostrando {sortedProjects.length} de {projectsData.length} proyectos
+            Mostrando{" "} 
+            {Math.min(sortedProjects.length, endIndex)} de{" "}
+            {sortedProjects.length} proyectos
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm" disabled>
-              Anterior
-            </Button>
             <Button
               variant="outline"
               size="sm"
-              className="bg-[#2E5C8A] text-white hover:bg-[#1E4A6F]"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1 || sortedProjects.length === 0}
             >
-              1
+              Anterior
             </Button>
-            <Button variant="outline" size="sm">
-              2
-            </Button>
-            <Button variant="outline" size="sm">
-              3
-            </Button>
-            <Button variant="outline" size="sm">
+            {Array.from({ length: totalPages }, (_, i) => (
+              <Button
+                key={i + 1}
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(i + 1)}
+                className={
+                  currentPage === i + 1
+                    ? "bg-[#2E5C8A] text-white hover:bg-[#1E4A6F]"
+                    : ""
+                }
+              >
+                {i + 1}
+              </Button>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={
+                currentPage === totalPages || sortedProjects.length === 0
+              }
+            >
               Siguiente
             </Button>
           </div>
