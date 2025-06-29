@@ -1,7 +1,8 @@
-import { useState } from "react"; // Todavía necesitamos useState para otros fines
+// src/pages/VisualizacionPage.jsx
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge"; // Shadcn Badge
 import {
   Select,
   SelectContent,
@@ -9,173 +10,351 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardFooter, // CardFooter ya no se usará, pero lo mantengo en el import por si lo usas en otro lado
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search,
   Filter,
-  ChevronRight,
-  ChevronDown,
-  FileDown,
-  Clock, // Mantengo Clock si lo usas para otra cosa
-  DollarSign,
-  Users,
-  Tag,
+  Users, // Para el líder del proyecto
+  Tag, // Para temáticas (puede ser genérico)
   ArrowDownWideNarrow,
   ArrowUpWideNarrow,
-  Calendar, // Necesitaremos Calendar para "Fecha de registro"
+  Calendar, // Para la fecha
+  Zap, // Rayo para "Almacenamiento Energía"
+  FlaskRound, // Para "Hidrógeno"
+  Lightbulb, // Para "Contaminación Lumínica"
+  XCircle,
+  Info,
+  Pickaxe,
+  Dna,
+  BatteryCharging,
 } from "lucide-react";
 
-// Datos de ejemplo para los proyectos (sin lastUpdate, ya que no estaba en tu referencia de card expandida)
-const projects = [
-  {
-    id: 1,
-    title: "Base Circular: Agregados Sustentables para la Región de Valparaíso",
-    status: "Postulado",
-    theme: "Economía Circular",
-    academicUnit: "Escuela de Ingeniería Civil",
-    leader: "ÁLVARO DÍAZ",
-    amount: "$246.000.000",
-    supportType: "Total (Total)",
-    applicationDate: "17 de mayo de 2025",
-    call: "FRPD GORE Valparaíso",
-    comments: "Proyecto con apoyo total en la formulación",
-  },
-  {
-    id: 2,
-    title:
-      "Fortalecimiento de capacidades para la economía circular en plásticos en la red internacional TechTraPlastiCE",
-    status: "Postulado",
-    theme: "Economía Circular",
-    academicUnit: "Escuela de Ingeniería Química",
-    leader: "CARLOS JAVIER CARLESI",
-    amount: "$30.000.000",
-    supportType: "Parcial (Formulación y Postulación)",
-    applicationDate: "30 de abril de 2025",
-    call: "FOVI",
-    comments: "Proyecto postulado apoyado por Ivania",
-  },
-  {
-    id: 3,
-    title: "Centro Interdisciplinario Regional",
-    status: "Postulado",
-    theme: "Interdisciplina",
-    academicUnit: "Facultad de Ingeniería",
-    leader: "SEBASTIÁN CARLOS FINGERHUTH",
-    amount: "$259.000.000",
-    supportType: "Total (Total)",
-    applicationDate: "24 de abril de 2025",
-    call: "FRPD GORE Valparaíso",
-    comments:
-      "Se han tenido conversaciones con Gianni, Lorena Jorquera e Iván Díaz (se estaría postulando en 2025)",
-  },
-  {
-    id: 4,
-    title: "Diplomado Evaluación Ambiental de Proyectos de Hidrógeno Verde",
-    status: "Postulado",
-    theme: "Hidrógeno",
-    academicUnit: "Facultad de Ingeniería",
-    leader: "SEBASTIÁN CARLOS FINGERHUTH",
-    amount: "No especificado",
-    supportType: "Total (Total)",
-    applicationDate: "6 de abril de 2025",
-    call: "Programa de Formación para la competitividad",
-    comments: "-",
-  },
-];
+import { Spinner } from "@/components/ui/spinner";
+import funcionesService from "../api/funciones.js";
+import { useError } from "@/contexts/ErrorContext";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Componente para la tarjeta de proyecto - MODIFICADO
-function ProjectCard({ project }) {
-  // Ya no necesitamos 'expanded' aquí
-  // const [expanded, setExpanded] = useState(false);
+// Importaciones de logos
+import anidLogo from "../assets/tipos_convocatorias/anid_rojo_azul.png";
+import corfoLogo from "../assets/tipos_convocatorias/corfo2024.png";
+import goreLogo from "../assets/tipos_convocatorias/gore-valpo.jpg";
+import sqmLogo from "../assets/instituciones/sqm.png";
+import codesserLogo from "../assets/instituciones/logo-codesser2.png";
+
+// Mapeo de INSTITUCIONES a sus logos
+const INSTITUCION_LOGOS = {
+  ANID: anidLogo,
+  CORFO: corfoLogo,
+  "GORE-Valparaíso": goreLogo, // Asegúrate de que este nombre coincide si viene así en 'institucion'
+  SQM: sqmLogo,
+  CODESSER: codesserLogo,
+};
+
+// Componente ProjectCard
+function ProjectCard({ project, academicosDelProyecto }) {
+  const renderInstitucionLogo = (nombreInstitucion) => {
+    const logoSrc = INSTITUCION_LOGOS[nombreInstitucion];
+    if (logoSrc) {
+      return (
+        <img
+          src={logoSrc}
+          alt={`${nombreInstitucion} Logo`}
+          className="h-5 w-5 object-contain rounded-full border border-gray-200"
+        />
+      );
+    } else if (
+      nombreInstitucion === "PRIVADA" ||
+      nombreInstitucion === "CODESSER" ||
+      nombreInstitucion === "SQM"
+    ) {
+      return (
+        <div className="h-5 w-5 flex items-center justify-center bg-gray-200 rounded-full text-gray-700 text-[0.7rem] font-bold flex-shrink-0">
+          {nombreInstitucion === "PRIVADA"
+            ? "PRIV"
+            : nombreInstitucion.substring(0, 4).toUpperCase()}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const getThematicBadge = (tematica) => {
+    const baseClasses =
+      "flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium";
+    let icon = <Tag className="h-4 w-4" />;
+    let colorClasses = "bg-gray-100 text-gray-700";
+
+    switch (tematica) {
+      case "Almacenamiento Energía":
+        icon = <Zap className="h-4 w-4" />;
+        colorClasses = "bg-teal-100 text-teal-700";
+        break;
+      case "Hidrógeno":
+        icon = <FlaskRound className="h-6 w-6" />;
+        colorClasses = "bg-cyan-100 text-cyan-700";
+        break;
+      case "Contaminación Lumínica":
+        icon = <Lightbulb className="h-4 w-4" />;
+        colorClasses = "bg-yellow-100 text-yellow-700";
+        break;
+      case "Minería":
+        icon = <Pickaxe className="h-4 w-4" />;
+        colorClasses = "bg-orange-100 text-orange-700";
+        break;
+      case "Biotecnología":
+        icon = <Dna className="h-4 w-4" />;
+        colorClasses = "bg-purple-100 text-purple-700";
+        break;
+      case "Litio":
+        icon = <BatteryCharging className="h-4 w-4" />;
+        colorClasses = "bg-slate-100 text-slate-700";
+        break;
+      default:
+        icon = <Tag className="h-4 w-4" />;
+        colorClasses = "bg-gray-100 text-gray-700";
+        break;
+    }
+    return (
+      <Badge className={`${baseClasses} ${colorClasses}`}>
+        {icon} {tematica}
+      </Badge>
+    );
+  };
+
+  // getStatusBadge: Retorna el Badge de estatus (sin iconos, solo texto)
+  const getStatusBadge = (estatus) => {
+    // Clases base para el badge de estatus
+    const baseClasses =
+      "px-2.5 py-1 rounded-full text-s font-medium font-semibold whitespace-nowrap flex-shrink-0";
+    let colorClasses = "";
+
+    switch (estatus) {
+      case "Postulado":
+        colorClasses = "bg-blue-100 text-blue-700 border-blue-200";
+        break;
+      case "Perfil": // Asegúrate de que el valor del estatus es "Perfilado" y no "Perfil"
+        colorClasses = "bg-yellow-100 text-yellow-700 border-yellow-200";
+        break;
+      case "Adjudicado":
+        colorClasses = "bg-green-100 text-green-700 border-green-200";
+        break;
+      default:
+        colorClasses = "bg-gray-100 text-gray-700 border-gray-200";
+        break;
+    }
+    return (
+      <Badge className={`${baseClasses} ${colorClasses}`}>
+        <span>{estatus}</span>
+      </Badge>
+    );
+  };
+
+  const formatDateShort = (dateString) => {
+    if (!dateString) return "Sin fecha";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date)) return "Fecha Inválida";
+      const options = { month: "short", year: "numeric" };
+      let formatted = date.toLocaleDateString("es-CL", options);
+      formatted = formatted.replace(".", "");
+      return formatted;
+    } catch (e) {
+      console.warn(
+        "Invalid date string for ProjectCard (short format):",
+        dateString,
+        e
+      );
+      return "Fecha Inválida";
+    }
+  };
+
+  // Nombres de los académicos para mostrar
+  const academicosNames =
+    academicosDelProyecto && Array.isArray(academicosDelProyecto.profesores)
+      ? academicosDelProyecto.profesores
+          .map((p) => p.nombre_completo)
+          .join(", ")
+      : "N/A";
 
   return (
-    <Card className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
-      <CardHeader className="bg-gradient-to-r from-[#2E5C8A] to-[#3A6FA7] p-4 min-h-[96px] flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white  pr-4 flex-grow">
-          {project.title}
-        </h3>
-        <Badge className="bg-blue-200 text-blue-800 hover:bg-blue-200 whitespace-nowrap self-start">
-          {project.status}
-        </Badge>
-      </CardHeader>
-      {/* Información esencial siempre visible (Contenido Central) - MODIFICADO */}
-      {/* Ahora todo va aquí y se distribuye en un grid */}
-      <CardContent className="p-4 flex-grow">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-4">
-          {/* Líder y Unidad Académica */}
-          <div className="flex items-center">
-            <Users className="w-4 h-4 text-gray-500 mr-2 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-gray-900 ">
-                {project.leader}
-              </p>
-              <p className="text-xs text-gray-500 ">{project.academicUnit}</p>
-            </div>
-          </div>
-
-          {/* Monto y Tipo de Apoyo */}
-          <div className="flex items-center">
-            <DollarSign className="w-4 h-4 text-gray-500 mr-2 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-gray-900 ">
-                {project.amount}
-              </p>
-              <p className="text-xs text-gray-500 ">{project.supportType}</p>
-            </div>
-          </div>
-
-          {/* Fecha de Registro (anteriormente "Fecha de postulación") */}
-          <div className="flex items-center">
-            <Calendar className="w-4 h-4 text-gray-500 mr-2 shrink-0" />
-            <p className="text-sm text-gray-900 ">{project.applicationDate}</p>
-          </div>
-
-          {/* Convocatoria */}
-          <div className="flex items-center">
-            <ChevronRight className="w-4 h-4 text-gray-500 mr-2 shrink-0" />{" "}
-            {/* O un icono de documento/bandera */}
-            <p className="text-sm text-gray-900 ">{project.call}</p>
-          </div>
-
-          {/* Temática (mantengo en una fila separada o al final si es necesario) */}
-          <div className="flex items-center md:col-span-2">
-            {" "}
-            {/* Ocupa todo el ancho en md */}
-            <Tag className="w-4 h-4 text-gray-500 mr-2 shrink-0" />
-            <p className="text-sm text-gray-900 ">{project.theme}</p>
-          </div>
+    <Card className="relative flex flex-col bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden h-full">
+      <CardHeader className="bg-gradient-to-r from-[#2E5C8A] to-[#3A6FA7] p-4 flex-shrink-0">
+        <div className="flex justify-between items-start">
+          <h3 className="text-lg font-semibold text-white leading-tight pr-4 flex-grow line-clamp-2">
+            {project.nombre || "Nombre no disponible"}
+          </h3>
         </div>
-        {/* Los comentarios ya no se muestran por defecto para mantener la tarjeta compacta */}
-        {/* Si los quieres, deberías decidir dónde ubicarlos o si es un tooltip al hover */}
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          {getThematicBadge(project.tematica)}
+          {project.institucion && (
+            <Badge className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
+              {renderInstitucionLogo(project.institucion)}
+              <span>{project.institucion}</span>
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+
+      <CardContent className="flex-grow p-4">
+        {/* Líder / Profesores */}
+        <div className="flex items-center text-gray-700 text-sm mb-2">
+          <Users className="h-4 w-4 mr-2 text-gray-500" />
+          <p>{academicosNames}</p> {/* Muestra los nombres de los académicos */}
+        </div>
+        {/* Fecha de Postulación */}
+        <div className="flex items-center text-gray-700 text-sm">
+          <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+          <p>{formatDateShort(project.fecha_postulacion)}</p>
+        </div>
+        {/* Badge en esquina inferior derecha */}
+        <div className="absolute bottom-4 right-4">
+          {getStatusBadge(project.estatus)}
+        </div>
       </CardContent>
-      {/* Eliminado CardFooter, ya no hay botón de expandir */}
     </Card>
   );
 }
 
 export default function VisualizacionPage() {
-  const [orden, setOrden] = useState("reciente"); // "reciente" o "antiguo"
+  const [orden, setOrden] = useState("reciente");
+  const [projectsData, setProjectsData] = useState([]); // Todos los proyectos sin filtrar
+  const [selectedStatus, setSelectedStatus] = useState("todos"); // 'todos', 'Postulado', 'Adjudicado', 'Perfilado'
+  const [academicosMap, setAcademicosMap] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [errorLocal, setErrorLocal] = useState(null);
+  const { setError: setErrorGlobal } = useError();
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedInstitucion, setSelectedInstitucion] = useState("todos");
+  const [selectedConvocatoria, setSelectedConvocatoria] = useState("todos");
+  const [selectedTematica, setSelectedTematica] = useState("todos");
+
+  const fetchData = async () => {
+    setLoading(true);
+    setErrorLocal(null);
+    setErrorGlobal(null);
+
+    try {
+      const [projectsResponse, academicosResponse] = await Promise.all([
+        funcionesService.getDataInterseccionProyectos(),
+        funcionesService.getAcademicosPorProyecto(),
+      ]);
+
+      const projects = Array.isArray(projectsResponse) ? projectsResponse : [];
+      const academicosPorProyecto = Array.isArray(academicosResponse)
+        ? academicosResponse
+        : [];
+
+      const newAcademicosMap = academicosPorProyecto.reduce((map, item) => {
+        map[item.id_proyecto] = item;
+        return map;
+      }, {});
+      setAcademicosMap(newAcademicosMap);
+
+      setProjectsData(projects);
+
+      console.log("Proyectos obtenidos:", projects);
+      console.log("Mapa de Académicos por Proyecto:", newAcademicosMap);
+    } catch (err) {
+      console.error("Error fetching data for VisualizacionPage:", err);
+      setErrorLocal(
+        err.message || "Error desconocido al cargar los proyectos."
+      );
+      setErrorGlobal(err.message || "Error al cargar los proyectos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Opciones únicas para los Selects (calculadas a partir de projectsData)
+  const uniqueConvocatorias = [
+    ...new Set(projectsData.map((p) => p.nombre_convo)),
+  ]
+    .filter(Boolean)
+    .sort();
+  const uniqueTematicas = [...new Set(projectsData.map((p) => p.tematica))]
+    .filter(Boolean)
+    .sort();
+  const uniqueInstituciones = [
+    ...new Set(projectsData.map((p) => p.institucion)),
+  ]
+    .filter(Boolean)
+    .sort();
+
+  // Lógica para filtrar proyectos según el estatus seleccionado
+  const filteredProjects = projectsData.filter((project) => {
+    // Filtrar por estatus
+    const matchesStatus =
+      selectedStatus === "todos" || project.estatus === selectedStatus;
+
+    // Filtro por término de búsqueda (en el nombre del proyecto)
+    const matchesSearch =
+      searchTerm === "" || // Si el searchTerm está vacío, no filtra por búsqueda
+      project.nombre.toLowerCase().startsWith(searchTerm.toLowerCase());
+
+    // Nuevo filtro por convocatoria
+    const matchesConvocatoria =
+      selectedConvocatoria === "todos" ||
+      project.nombre_convo === selectedConvocatoria;
+
+    // Nuevo filtro por temática
+    const matchesTematica =
+      selectedTematica === "todos" || project.tematica === selectedTematica;
+
+    // Nuevo filtro por institución
+    const matchesInstitucion =
+      selectedInstitucion === "todos" ||
+      project.institucion === selectedInstitucion;
+
+    return (
+      matchesStatus &&
+      matchesSearch &&
+      matchesConvocatoria &&
+      matchesTematica &&
+      matchesInstitucion
+    );
+  });
+
+  // Lógica de ordenamiento
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
+    const hasDateA =
+      a.fecha_postulacion && !isNaN(new Date(a.fecha_postulacion));
+    const hasDateB =
+      b.fecha_postulacion && !isNaN(new Date(b.fecha_postulacion));
+    if (!hasDateA && !hasDateB) return 0; // Ambos sin fecha, mantener orden relativo
+    if (!hasDateA) return orden === "reciente" ? 1 : -1; // A sin fecha, va al final en reciente, al principio en antiguo
+    if (!hasDateB) return orden === "reciente" ? -1 : 1; // B sin fecha, va al final en reciente, al principio en antiguo
+    const dateA = new Date(a.fecha_postulacion);
+    dateA.setUTCHours(0, 0, 0, 0); // Forzar a medianoche UTC
+    const dateB = new Date(b.fecha_postulacion);
+    dateB.setUTCHours(0, 0, 0, 0); // Forzar a me
+
+    if (orden === "reciente") {
+      return dateB.getTime() - dateA.getTime();
+    } else {
+      // "antiguo"
+      return dateA.getTime() - dateB.getTime();
+    }
+  });
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Visualización de Proyectos
           </h1>
           <p className="text-gray-600">
-            Explora y gestiona todos los proyectos de tu organización
+            Explora y gestiona todos tus proyectos de tu organización
           </p>
         </div>
 
-        {/* Filters and Search */}
+        {/* Filters and Search (sin cambios) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[220px]">
@@ -187,44 +366,68 @@ export default function VisualizacionPage() {
                 <Input
                   placeholder="Buscar proyectos..."
                   className="pl-10 bg-gray-50 border-gray-200"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
             <div>
-              <Select defaultValue="convocatorias">
+              <Select
+                value={selectedConvocatoria}
+                onValueChange={setSelectedConvocatoria}
+              >
                 <SelectTrigger className="bg-gray-50 border-gray-200">
-                  <SelectValue placeholder="Convocatorias" />
+                  <SelectValue placeholder="Todas las convocatorias" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="convocatorias">
-                    Todas las convocatorias
-                  </SelectItem>
-                  <SelectItem value="frpd">FRPD GORE Valparaíso</SelectItem>
-                  <SelectItem value="fovi">FOVI</SelectItem>
-                  <SelectItem value="programa">
-                    Programa de Formación
-                  </SelectItem>
+                  <SelectItem value="todos">Todas las convocatorias</SelectItem>
+                  {uniqueConvocatorias.map((conv) => (
+                    <SelectItem key={conv} value={conv}>
+                      {conv}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Select defaultValue="tematicas">
+              <Select
+                value={selectedInstitucion}
+                onValueChange={setSelectedInstitucion}
+              >
                 <SelectTrigger className="bg-gray-50 border-gray-200">
-                  <SelectValue placeholder="Temáticas" />
+                  <SelectValue placeholder="Todas las instituciones" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="tematicas">Todas las temáticas</SelectItem>
-                  <SelectItem value="economia">Economía Circular</SelectItem>
-                  <SelectItem value="interdisciplina">
-                    Interdisciplina
-                  </SelectItem>
-                  <SelectItem value="hidrogeno">Hidrógeno</SelectItem>
+                  <SelectItem value="todos">Todas las instituciones</SelectItem>
+                  {uniqueInstituciones.map((institucion) => (
+                    <SelectItem key={institucion} value={institucion}>
+                      {institucion}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Select
+                value={selectedTematica}
+                onValueChange={setSelectedTematica}
+              >
+                <SelectTrigger className="bg-gray-50 border-gray-200">
+                  <SelectValue placeholder="Todas las temáticas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas las temáticas</SelectItem>
+                  {uniqueTematicas.map((tem) => (
+                    <SelectItem key={tem} value={tem}>
+                      {tem}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <Select value={orden} onValueChange={setOrden}>
-                <SelectTrigger className="bg-gray-50  border-gray-200">
+                <SelectTrigger className="bg-gray-50 border-gray-200">
                   <SelectValue placeholder="Ordenar por" />
                 </SelectTrigger>
                 <SelectContent>
@@ -246,67 +449,78 @@ export default function VisualizacionPage() {
           </div>
         </div>
 
-        {/* Botones de exportar */}
-        <div className="flex justify-end mt-4 gap-2">
-          <Button
-            variant="secondary"
-            className="bg-red-600 text-md text-white hover:bg-red-500 cursor-pointer"
-            onClick={() => exportarPDF(projects)}
-          >
-            <FileDown className="w-4 h-4 mr-2" />
-            Exportar PDF
-          </Button>
-          <Button
-            variant="secondary"
-            className="bg-green-600 text-md text-white hover:bg-green-500 cursor-pointer"
-            onClick={() => exportarExcel(projects)}
-          >
-            <FileDown className="w-4 h-4 mr-2" />
-            Exportar Excel
-          </Button>
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="todos" className="mb-6">
+        {/* Tabs - Ahora manejan el estado de filtro */}
+        <Tabs
+          value={selectedStatus}
+          onValueChange={setSelectedStatus}
+          className="mb-6"
+        >
           <TabsList className="bg-white border border-gray-100">
             <TabsTrigger
               value="todos"
               className="data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
             >
-              Todos (12)
+              Todos ({projectsData.length})
             </TabsTrigger>
             <TabsTrigger
-              value="postulados"
+              value="Postulado"
               className="data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
             >
-              Postulados (4)
+              Postulados (
+              {projectsData.filter((p) => p.estatus === "Postulado").length})
             </TabsTrigger>
             <TabsTrigger
-              value="adjudicados"
+              value="Adjudicado"
               className="data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
             >
-              Adjudicados (3)
+              Adjudicados (
+              {projectsData.filter((p) => p.estatus === "Adjudicado").length})
             </TabsTrigger>
             <TabsTrigger
-              value="perfil"
+              value="Perfil"
               className="data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
             >
-              Perfil (5)
+              Perfil (
+              {projectsData.filter((p) => p.estatus === "Perfil").length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        {/* Projects Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
-          ))}
-        </div>
+        {/* Projects Grid (Renderizado Condicional) */}
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <Spinner size={64} className="text-[#2E5C8A]" />
+          </div>
+        ) : errorLocal ? (
+          <Alert variant="destructive" className="bg-red-50 text-red-700">
+            <XCircle className="h-5 w-5" />
+            <AlertTitle>Error al cargar proyectos</AlertTitle>
+            <AlertDescription>{errorLocal}</AlertDescription>
+          </Alert>
+        ) : sortedProjects.length === 0 ? (
+          <Alert variant="default" className="bg-blue-50 text-blue-700">
+            <Info className="h-5 w-5" />
+            <AlertTitle>No hay proyectos</AlertTitle>
+            <AlertDescription>
+              No se encontraron proyectos para mostrar con el filtro actual.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {sortedProjects.map((project) => (
+              <ProjectCard
+                key={project.id_proyecto}
+                project={project}
+                academicosDelProyecto={academicosMap[project.id_proyecto]}
+              />
+            ))}
+          </div>
+        )}
 
-        {/* Pagination */}
+        {/* Pagination (sin cambios) */}
         <div className="flex justify-between items-center bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="text-sm text-gray-500">
-            Mostrando 4 de 12 proyectos
+            Mostrando {sortedProjects.length} de {projectsData.length} proyectos
           </div>
           <div className="flex space-x-2">
             <Button variant="outline" size="sm" disabled>

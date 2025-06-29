@@ -1,6 +1,7 @@
+// src/pages/HomePage.jsx
 import { Button } from "@/components/ui/button";
 import funcionesService from "../api/funciones.js";
-import FondosActivosSection from "./components/FondosActivosSection.jsx";
+import FondosActivosSection from "../pages/components/FondosActivosSection"; // Asegúrate de esta ruta
 import estadisticasService from "../api/estadisticas.js";
 import { useState, useEffect } from "react";
 
@@ -16,39 +17,40 @@ import {
   ContactRound,
   FolderOpen,
   FolderCheck,
+  FileDown,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
 
-// Mantienes el useError, pero NO usarás useLoading aquí.
 import { useError } from "@/contexts/ErrorContext";
+import { useExportData } from "@/hooks/useExportData";
+
+// Importa los iconos de los archivos si los vas a seguir usando así
+import pdfIcon from '../assets/icons/file-pdf-regular.svg';
+import excelIcon from '../assets/icons/excel2-svgrepo-com.svg';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [proyectosCrudosData, setProyectosCrudosData] = useState([]);
   const [proyectosProfesorData, setProyectosProfesorData] = useState([]);
-  // **** Vuelve a usar useState local para `loading` ****
-  const [loading, setLoading] = useState(true); // Inicia en true para mostrar el spinner al cargar
-  // Mantienes el uso del hook de error global
+  const [loadingQuickStats, setLoadingQuickStats] = useState(true);
   const { setError } = useError();
 
-  // Las variables calculadas se mantienen igual
+  const { loadingExportPDF, loadingExportExcel, generarPDF, generarExcel } =
+    useExportData();
+
   const proyectosEnCartera = Array.isArray(proyectosCrudosData)
     ? proyectosCrudosData.length
     : 0;
-
   const postuladosCount = Array.isArray(proyectosCrudosData)
     ? proyectosCrudosData.filter((p) => p.estatus === "Postulado").length
     : 0;
-
   const perfiladosCount = Array.isArray(proyectosCrudosData)
     ? proyectosCrudosData.filter((p) => p.estatus === "Perfilado").length
     : 0;
 
   const fetchData = async () => {
-    // Aquí el `setLoading(true)` es el local de este componente
-    setLoading(true);
-    // Limpia el error global antes de la nueva petición
+    setLoadingQuickStats(true);
     setError(null);
     try {
       const projectsResponse =
@@ -65,11 +67,9 @@ export default function HomePage() {
       );
     } catch (e) {
       console.error("Error fetching data for dashboard summary:", e);
-      // Muestra el error globalmente a través del contexto
       setError(e.message || "Error desconocido al cargar los datos.");
     } finally {
-      // Aquí el `setLoading(false)` es el local de este componente
-      setLoading(false);
+      setLoadingQuickStats(false);
     }
   };
 
@@ -77,7 +77,6 @@ export default function HomePage() {
     fetchData();
   }, []);
 
-  // ... (Resto de tus datos simulados y JSX)
   const estadisticas = {
     totalProyectos: 24,
     proyectosActivos: 12,
@@ -161,17 +160,67 @@ export default function HomePage() {
     },
   ];
 
+  const handleNavbarNavigation = (path) => {
+    navigate(path);
+  };
+
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Centro de Control de Proyectos
-          </h1>
-          <p className="text-gray-600">
-            Gestiona y monitorea todos tus proyectos desde un solo lugar
-          </p>
+        {/* Welcome Section y Botones de Exportar */}
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Centro de Control de Proyectos
+            </h1>
+            <p className="text-gray-600">
+              Gestiona y monitorea todos tus proyectos desde un solo lugar
+            </p>
+          </div>
+          {/* Botones de exportar */}
+          <div className="flex flex-wrap gap-2 mt-4 sm:mt-0">
+            <Button
+              variant="secondary"
+              className="bg-red-500 text-md text-white hover:bg-red-600 cursor-pointer"
+              onClick={generarPDF}
+              disabled={loadingExportPDF} // Deshabilitar mientras carga
+            >
+              {loadingExportPDF ? (
+                // **** Spinner para el botón PDF ****
+                <Spinner size={16} className="text-white mr-2" />
+              ) : (
+                <div className="bg-white rounded-full p-1 mr-2 flex items-center justify-center w-6 h-6">
+                  <img
+                    src={pdfIcon} // Usar la importación del icono
+                    alt="PDF icon"
+                    className="w-4 h-4"
+                  />
+                </div>
+              )}
+              Exportar Cartera
+            </Button>
+
+            <Button
+              variant="secondary"
+              className="bg-green-500 text-md text-white hover:bg-green-600 cursor-pointer"
+              onClick={generarExcel}
+              disabled={loadingExportExcel} // Deshabilitar mientras carga
+            >
+              {loadingExportExcel ? (
+                // **** Spinner para el botón Excel ****
+                <Spinner size={16} className="text-white mr-2" />
+              ) : (
+                <div className="bg-white rounded-full p-1 mr-2 flex items-center justify-center w-6 h-6">
+                  <img
+                    src={excelIcon} // Usar la importación del icono
+                    alt="Excel icon"
+                    className="w-4 h-4"
+                  />
+                </div>
+              )}
+              Exportar Cartera
+            </Button>
+          </div>
         </div>
 
         {/* Quick Stats - Los divs que contendrán los spinners */}
@@ -183,8 +232,7 @@ export default function HomePage() {
                 <p className="text-sm font-medium text-gray-600">
                   Total Proyectos
                 </p>
-                {loading ? (
-                  // **** Spinner para Total Proyectos ****
+                {loadingQuickStats ? (
                   <div className="flex justify-center items-center h-8">
                     <Spinner size={24} className="text-[#2E5C8A]" />
                   </div>
@@ -205,8 +253,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Postulados</p>
-                {loading ? (
-                  // **** Spinner para Postulados ****
+                {loadingQuickStats ? (
                   <div className="flex justify-center items-center h-8">
                     <Spinner size={24} className="text-green-600" />
                   </div>
@@ -227,8 +274,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Perfilados</p>
-                {loading ? (
-                  // **** Spinner para Perfilados ****
+                {loadingQuickStats ? (
                   <div className="flex justify-center items-center h-8">
                     <Spinner size={24} className="text-purple-600" />
                   </div>
