@@ -13,13 +13,14 @@ import anidLogo from "../../assets/tipos_convocatorias/anid_rojo_azul.png";
 import corfoLogo from "../../assets/tipos_convocatorias/corfo2024.png";
 import goreLogo from "../../assets/tipos_convocatorias/gore-valpo.jpg";
 import internasPucvLogo from "../../assets/tipos_convocatorias/internaspucv.svg";
+import privadaLogo from "../../assets/tipos_convocatorias/private.png";
 
-// Mapeo de tipos de fondo a sus logos
 const FONDO_LOGOS = {
   ANID: anidLogo,
   CORFO: corfoLogo,
   GORE: goreLogo,
   "Internas PUCV": internasPucvLogo,
+  PRIVADA: privadaLogo,
 };
 
 export default function FondosActivosSection() {
@@ -41,48 +42,54 @@ export default function FondosActivosSection() {
     }
   }, []);
 
-  const isFondoVigente = useCallback((fondo) => {
-    if (!fondo.inicio || !fondo.cierre) return false;
+  const isFondoVigente = useCallback(
+    (fondo) => {
+      if (!fondo.inicio || !fondo.cierre) return false;
 
-    const hoy = currentDate; // Usa currentDate del estado
-    const hoyUTC = new Date(hoy.toISOString().slice(0, 10));
-    hoyUTC.setUTCHours(0, 0, 0, 0);
+      const hoy = currentDate; // Usa currentDate del estado
+      const hoyUTC = new Date(hoy.toISOString().slice(0, 10));
+      hoyUTC.setUTCHours(0, 0, 0, 0);
 
-    const inicioFondoUTC = new Date(fondo.inicio);
-    const cierreFondoUTC = new Date(fondo.cierre);
+      const inicioFondoUTC = new Date(fondo.inicio);
+      const cierreFondoUTC = new Date(fondo.cierre);
 
-    inicioFondoUTC.setUTCHours(0, 0, 0, 0);
-    cierreFondoUTC.setUTCHours(23, 59, 59, 999);
+      inicioFondoUTC.setUTCHours(0, 0, 0, 0);
+      cierreFondoUTC.setUTCHours(23, 59, 59, 999);
 
-    return hoyUTC >= inicioFondoUTC && hoyUTC <= cierreFondoUTC;
-  }, [currentDate]); // Dependencia: currentDate
+      return hoyUTC >= inicioFondoUTC && hoyUTC <= cierreFondoUTC;
+    },
+    [currentDate]
+  ); // Dependencia: currentDate
 
-  const getDaysRemaining = useCallback((cierreDateString) => {
-    if (!cierreDateString) return null;
+  const getDaysRemaining = useCallback(
+    (cierreDateString) => {
+      if (!cierreDateString) return null;
 
-    const cierre = new Date(cierreDateString);
-    cierre.setHours(23, 59, 59, 999);
+      const cierre = new Date(cierreDateString);
+      cierre.setHours(23, 59, 59, 999);
 
-    const hoy = currentDate; // Usa currentDate del estado
-    const hoyInicioDia = new Date(
-      hoy.getFullYear(),
-      hoy.getMonth(),
-      hoy.getDate()
-    );
-    const cierreInicioDia = new Date(
-      cierre.getFullYear(),
-      cierre.getMonth(),
-      cierre.getDate()
-    );
+      const hoy = currentDate; // Usa currentDate del estado
+      const hoyInicioDia = new Date(
+        hoy.getFullYear(),
+        hoy.getMonth(),
+        hoy.getDate()
+      );
+      const cierreInicioDia = new Date(
+        cierre.getFullYear(),
+        cierre.getMonth(),
+        cierre.getDate()
+      );
 
-    const diffTime = cierreInicioDia.getTime() - hoyInicioDia.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffTime = cierreInicioDia.getTime() - hoyInicioDia.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) return "Cierra hoy";
-    if (diffDays === 1) return "Cierra mañana";
-    if (diffDays > 1) return `en ${diffDays} días`;
-    return null;
-  }, [currentDate]); // Dependencia: currentDate
+      if (diffDays === 0) return "Cierra hoy";
+      if (diffDays === 1) return "Cierra mañana";
+      if (diffDays > 1) return `en ${diffDays} días`;
+      return null;
+    },
+    [currentDate]
+  ); // Dependencia: currentDate
 
   // Función para obtener el renderizable del "logo"
   const renderFondoIconOrLogo = useCallback((tipoFondoNombre) => {
@@ -193,14 +200,14 @@ export default function FondosActivosSection() {
                   </p>
                 )}
 
-                <div className="flex items-center justify-between w-full text-xs text-gray-600 mb-1">
+                <div className="flex flex-col justify-between w-full text-xs text-gray-600 mb-1">
                   <div className="flex items-center">
                     <Calendar className="h-3 w-3 text-gray-400 mr-1" />
                     <span>Cierre: {formatDate(fondo.cierre)}</span>
                   </div>
 
                   {getDaysRemaining(fondo.cierre) && (
-                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium flex items-center gap-1">
+                    <span className=" py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium flex items-center gap-1">
                       <Clock className="h-3 w-3" />{" "}
                       {getDaysRemaining(fondo.cierre)}
                     </span>

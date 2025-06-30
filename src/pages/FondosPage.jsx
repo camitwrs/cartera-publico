@@ -1,6 +1,6 @@
 // src/pages/FondosConcursablesPage.jsx
 
-import React from "react"; // Siempre importante para componentes React
+import { useState, useCallback, useEffect } from "react";
 import {
   // Asegúrate de importar solo lo que realmente usas
   Search,
@@ -8,6 +8,9 @@ import {
   Target,
   ClipboardList,
   Calendar,
+  RotateCcw,
+  XCircle,
+  Info,
 } from "lucide-react";
 
 // Importa los componentes de Accordion de Shadcn UI
@@ -18,122 +21,203 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 
-export default function FondosPage() {
-  // Datos simulados (fondos)
-  const fondos = [
-    {
-      id: 1,
-      nombre: "Concurso IDeA I+D 2026",
-      institucion: "ANID",
-      trl: "TRL 2",
-      monto: "227 millones",
-      duracion: "24 meses",
-      estado: "Finalizado",
-      objetivo:
-        "Apoya el cofinanciamiento de proyectos de I+D aplicada con un fuerte componente científico, para que desarrollen tecnologías que puedan convertirse en nuevos productos, procesos o servicios, con una razonable probabilidad de generación de impactos productivos, económicos y sociales.",
-      requisitos: ["No hay requisitos detallados disponibles."],
-      fechaInicio: "29 de junio de 2025",
-      fechaCierre: "30 de agosto de 2025",
-    },
-    {
-      id: 2,
-      nombre: "Concurso de Investigación Tecnológica IDeA 2026",
-      institucion: "ANID",
-      trl: "TRL 4",
-      monto: "237 millones",
-      duracion: "24 meses",
-      estado: "Finalizado",
-      objetivo:
-        "Apoyar el financiamiento de proyectos de investigación y desarrollo, con antecedentes que sustenten una hipótesis de aplicación de una tecnología, producto o servicio y que, con el desarrollo de la investigación, logren validarse a través de prototipos avanzados en el plazo de dos años. En la etapa de Investigación Tecnológica, se espera que los proyectos avancen hacia la obtención de resultados más próximos a su aplicación productiva o a su implementación en el plano social.",
-      requisitos: ["No hay requisitos detallados disponibles."],
-      fechaInicio: "30 de agosto de 2025",
-      fechaCierre: "30 de octubre de 2025",
-    },
-    {
-      id: 3,
-      nombre: "Startup Ciencia 2026",
-      institucion: "ANID",
-      trl: "TRL 3",
-      monto: "134 millones",
-      duracion: "12 meses",
-      estado: "Finalizado",
-      objetivo:
-        "Promover el crecimiento y fortalecimiento de empresas de base científico-tecnológica (EBCT) en Chile y en etapa temprana, a través del cofinanciamiento y apoyo técnico en el proceso de desarrollo tecnológico e innovación, en la validación técnica y de negocios de nuevos productos o servicios, facilitando así su entrada a los mercados nacionales e internacionales.",
-      requisitos: [
-        "Contar con una empresa constituida en Chile con menos de 10 años. Dificultad: cofinanciamiento.",
-      ],
-      fechaInicio: "29 de junio de 2025",
-      fechaCierre: "30 de agosto de 2025",
-    },
-    {
-      id: 4,
-      nombre: "Convocatoria Crea y Valida",
-      institucion: "CORFO",
-      trl: "N/A",
-      monto: "180-220 millones",
-      duracion: "24 meses",
-      estado: "Finalizado",
-      objetivo:
-        "El programa Crea y Valida tiene como propósito apoyar el desarrollo de nuevos o mejorados productos (bienes o servicios) y/o procesos, que requieran I+D, desde la fase de prototipo hasta la fase de validación técnica a escala productiva y/o validación comercial. Su objetivo es fortalecer las capacidades de innovación en empresas chilenas. ",
-      requisitos: ["No hay requisitos detallados disponibles."],
-      fechaInicio: "28 de febrero de 2025",
-      fechaCierre: "30 de abril de 2025",
-    },
-    {
-      id: 5,
-      nombre: "Convocatoria Innova Región",
-      institucion: "CORFO",
-      trl: "N/A",
-      monto: "60 millones",
-      duracion: "24 meses",
-      estado: "Finalizado",
-      objetivo:
-        "El programa Innova Región tiene como propósito apoyar el desarrollo de nuevos o mejorados productos (bienes o servicios) y/o procesos, desde la fase de prototipo hasta la validación técnica y comercial, con el fin de fortalecer la innovación empresarial a nivel regional.",
-      requisitos: ["No hay requisitos detallados disponibles."],
-      fechaInicio: "31 de marzo de 2025",
-      fechaCierre: "30 de abril de 2025",
-    },
-    {
-      id: 6,
-      nombre: "DI Regular PUCV",
-      institucion: "INTERNAS PUCV",
-      trl: "N/A",
-      monto: "3.300.000",
-      duracion: "10 meses",
-      estado: "Finalizado",
-      objetivo:
-        "Incentivar a académicos/as con trayectoria investigadora en la PUCV que hayan finalizado proyectos FONDECYT (inicio/regular), FONDEF, o similares, y desean preparar una nueva postulación a esos concursos, o a proyectos similares.",
-      requisitos: [
-        "Publicar un paper WoS, Q1 o Q2, u otra alternativa de productividad científica equivalente.",
-        "Participar como evaluador/a en concursos de la Dirección de Investigación.",
-        "Colaborar en actividades de la Dirección de Investigación.",
-        "Involucrar estudiantes PUCV (tesistas de pre/postgrado).",
-        "Incluir agradecimientos a VINCI.",
-        "DI PUCV en la productividad científica.",
-        "Postular a FONDECYT 2025 u otro proyecto similar en 2024.",
-        "Generar difusión en medios/RRSS destacando el aporte PUCV.",
-      ],
-      fechaInicio: "28 de febrero de 2025",
-      fechaCierre: "31 de marzo de 2025",
-    },
-  ];
+import { Spinner } from "@/components/ui/spinner"; // Importa el Spinner de Shadcn
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Importa Alert de Shadcn
+import { Button } from "@/components/ui/button"; // Importa Button de Shadcn
+import { Input } from "@/components/ui/input"; // Importa Input de Shadcn
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"; // Importa Select de Shadcn
 
-  const getInstitucionColor = (institucion) => {
-    switch (institucion) {
+import { useError } from "@/contexts/ErrorContext"; // Importa tu hook de error global
+
+import fondosService from "../api/fondos.js"; // Importa el servicio de fondos
+import tipoConvocatoriaService from "../api/tipoconvocatoria.js"; // Importa el servicio de tipos de convocatoria
+
+// Importa los logos de las imágenes
+import anidLogo from "../assets/tipos_convocatorias/anid_rojo_azul.png";
+import corfoLogo from "../assets/tipos_convocatorias/corfo2024.png";
+import goreLogo from "../assets/tipos_convocatorias/gore-valpo.jpg";
+import internasPucvLogo from "../assets/tipos_convocatorias/internaspucv.svg";
+import privadaLogo from "../assets/tipos_convocatorias/private.png";
+
+// Mapeo de tipos de fondo a sus logos
+const FONDO_LOGOS = {
+  ANID: anidLogo,
+  CORFO: corfoLogo,
+  GORE: goreLogo,
+  "Internas PUCV": internasPucvLogo,
+  PRIVADA: privadaLogo,
+};
+
+export default function FondosPage() {
+  const [fondosData, setFondosData] = useState([]); // Almacenará los fondos reales de la API
+  const [loading, setLoading] = useState(true); // Estado de carga para la página
+  const [errorLocal, setErrorLocal] = useState(null); // Estado de error local para la página
+  const { setError: setErrorGlobal } = useError(); // Hook para mostrar errores globales
+
+  // Estados para los filtros
+  const [filterTipoFondo, setFilterTipoFondo] = useState("todos"); // Filtro por Tipo de Convocatoria (nombre)
+  const [filterTrl, setFilterTrl] = useState("todos"); // Filtro por TRL (valor numérico o "N/A" como string)
+  const [filterEstado, setFilterEstado] = useState("todos"); // Filtro por Estado (Vigente/Finalizado)
+  const [searchTerm, setSearchTerm] = useState(""); // Filtro por búsqueda de texto
+  // Mapas para IDs a Nombres (se llenarán desde la API para procesamiento de datos)
+  const [tipoConvocatoriaMap, setTipoConvocatoriaMap] = useState({}); // ID Tipo Conv -> Nombre
+
+  // Helper para obtener el color del badge del Tipo de Fondo
+  const getTipoFondoColor = useCallback((tipoFondoNombre) => {
+    switch (tipoFondoNombre) {
       case "ANID":
         return "bg-red-500 text-white";
       case "CORFO":
         return "bg-orange-500 text-white";
-      case "INTERNAS PUCV":
+      case "Internas PUCV":
         return "bg-blue-500 text-white";
+      case "GORE":
+        return "bg-purple-500 text-white"; // Si "GORE" es un nombre de tipo_convo
+      case "PRIVADA":
+        return "bg-gray-600 text-white"; // Si "PRIVADA" es un nombre de tipo_convo
       default:
         return "bg-gray-500 text-white";
     }
-  };
+  }, []);
+
+  const renderTipoFondoLogo = useCallback((tipoFondoNombre) => {
+    const logoSrc = FONDO_LOGOS[tipoFondoNombre];
+    if (logoSrc) {
+      return (
+        <img
+          src={logoSrc}
+          alt={`${tipoFondoNombre} Logo`}
+          className="h-5 w-5 object-contain rounded-full border border-gray-200"
+        />
+      );
+    }
+    return +(
+      <div className="h-5 w-5 flex items-center justify-center bg-gray-200 rounded-full text-gray-700 text-[0.7rem] font-bold flex-shrink-0">
+        {tipoFondoNombre ? tipoFondoNombre.charAt(0) : "F"}
+      </div>
+    );
+  }, []);
 
   const getTRLColor = (trl) => {
-    if (trl === "N/A") return "bg-gray-500 text-white";
+    if (trl === "Sin información") return "bg-gray-500 text-white";
     return "bg-green-500 text-white";
+  };
+
+  // Helper para formatear fechas del modal (si no lo tienes ya)
+  const formatDate = useCallback((dateString) => {
+    if (!dateString) return "Sin fecha";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date)) return "Fecha Inválida";
+      const options = { year: "numeric", month: "long", day: "numeric" };
+      return date.toLocaleDateString("es-CL", options);
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return "Fecha Inválida";
+    }
+  }, []);
+
+  // Helper para determinar si un fondo está vigente
+  const isFondoVigente = useCallback((fondo) => {
+    if (!fondo.inicio || !fondo.cierre) return false;
+    const hoy = new Date();
+    const inicio = new Date(fondo.inicio);
+    const cierre = new Date(fondo.cierre);
+    cierre.setHours(23, 59, 59, 999); // Ajustar a fin del día para comparación inclusiva
+    return hoy >= inicio && hoy <= cierre;
+  }, []);
+
+  // Helper para obtener el color del badge de estado (Vigente/Finalizado)
+  const getEstadoBadgeColor = useCallback((isVigente) => {
+    return isVigente ? "bg-green-500 text-white" : "bg-red-500 text-white";
+  }, []);
+
+  // --- Fetching de datos inicial ---
+  const fetchAllFondosData = async () => {
+    setLoading(true);
+    setErrorLocal(null);
+    setErrorGlobal(null);
+    try {
+      const [fondosResponse, tiposConvocatoriaResponse] = await Promise.all([
+        fondosService.getAllFondos(),
+        tipoConvocatoriaService.getAllTiposConvocatoria(),
+      ]);
+
+      // Construir mapa ID Tipo Conv -> Nombre
+      const newTipoConvocatoriaMap = tiposConvocatoriaResponse.reduce(
+        (map, tipo) => {
+          map[tipo.id] = tipo.nombre;
+          return map;
+        },
+        {}
+      );
+      setTipoConvocatoriaMap(newTipoConvocatoriaMap);
+
+      // Procesar fondos: añadir el nombre del tipo de convocatoria y el estado de vigencia
+      const processedFondos = fondosResponse.map((fondo) => {
+        const tipoNombre = newTipoConvocatoriaMap[fondo.tipo] || "Desconocido"; // Usamos fondo.tipo
+        const estadoVigente = isFondoVigente(fondo) ? "Vigente" : "Finalizado";
+
+        return {
+          ...fondo,
+          tipo_nombre: tipoNombre, // Nombre de la convocatoria (tipo de fondo)
+          estado_vigencia: estadoVigente, // "Vigente" o "Finalizado"
+        };
+      });
+
+      setFondosData(processedFondos);
+    } catch (err) {
+      console.error("Error fetching fondos data:", err);
+      setErrorLocal(err.message || "Error desconocido al cargar los fondos.");
+      setErrorGlobal(err.message || "Error al cargar los fondos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllFondosData();
+  }, []); // El array vacío asegura que se ejecute una sola vez al montar
+
+  // --- Lógica de Filtrado ---
+  const filteredFondos = fondosData.filter((fondo) => {
+    const matchesTipoFondo =
+      filterTipoFondo === "todos" || fondo.tipo_nombre === filterTipoFondo;
+    // Manejar TRL que puede ser null o una cadena, y el filtro "N/A"
+    const matchesTrl =
+      filterTrl === "todos" ||
+      (fondo.trl !== null && String(fondo.trl) === filterTrl) ||
+      (filterTrl === "Sin información" && fondo.trl === null);
+    const matchesEstado =
+      filterEstado === "todos" || fondo.estado_vigencia === filterEstado;
+    const matchesSearch =
+      searchTerm === "" ||
+      fondo.nombre.toLowerCase().startsWith(searchTerm.toLowerCase());
+
+    return matchesTipoFondo && matchesTrl && matchesEstado && matchesSearch;
+  });
+
+  // Opciones únicas para Selects (basadas en los datos reales)
+  // uniqueTiposFondo se basa en `tipo_nombre` del fondo procesado
+  const uniqueTiposFondo = [...new Set(fondosData.map((f) => f.tipo_nombre))]
+    .filter(Boolean)
+    .sort();
+  // uniqueTRLs es fijo (1-9 y N/A) ya que los valores de TRL no se sacan de una tabla externa
+  const uniqueTRLs = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+  // uniqueEstados son fijos (Vigente/Finalizado)
+  const uniqueEstados = ["Vigente", "Finalizado"];
+
+  const resetFilters = () => {
+    setFilterTipoFondo("todos");
+    setFilterTrl("todos");
+    setFilterEstado("todos");
+    setSearchTerm("");
   };
 
   return (
@@ -159,14 +243,22 @@ export default function FondosPage() {
                 TIPO DE FONDO:
               </label>
               <div className="relative">
-                {/* Selector de Tipo de Fondo */}
-                <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white">
-                  <option value="">Todos</option>
-                  <option value="ANID">ANID</option>
-                  <option value="CORFO">CORFO</option>
-                  <option value="INTERNAS PUCV">INTERNAS PUCV</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                <Select
+                  value={filterTipoFondo}
+                  onValueChange={setFilterTipoFondo}
+                >
+                  <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {uniqueTiposFondo.map((tipo) => (
+                      <SelectItem key={tipo} value={tipo}>
+                        {tipo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -176,22 +268,19 @@ export default function FondosPage() {
                 TRL:
               </label>
               <div className="relative">
-                {/* Selector de TRL */}
-                <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white">
-                  <option value="">Todos</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8</option>
-                  <option value="9">9</option>
-                  <option value="N/A">N/A</option>{" "}
-                  {/* Asegúrate de que N/A también sea una opción */}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                <Select value={filterTrl} onValueChange={setFilterTrl}>
+                  <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {uniqueTRLs.map((trl) => (
+                      <SelectItem key={trl} value={trl}>
+                        {trl}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -201,21 +290,30 @@ export default function FondosPage() {
                 ESTADO:
               </label>
               <div className="relative">
-                {/* Selector de Estado */}
-                <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white">
-                  <option value="">Todos</option>
-                  <option value="Vigente">Vigente</option>
-                  <option value="Finalizado">Finalizado</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                <Select value={filterEstado} onValueChange={setFilterEstado}>
+                  <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {uniqueEstados.map((estado) => (
+                      <SelectItem key={estado} value={estado}>
+                        {estado}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             {/* Botón Reiniciar */}
             <div className="flex items-end">
-              <button className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+              <Button
+                onClick={resetFilters}
+                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
                 Reiniciar Filtros
-              </button>
+              </Button>
             </div>
 
             {/* Búsqueda */}
@@ -225,9 +323,11 @@ export default function FondosPage() {
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
+                <Input
                   type="text"
                   placeholder="Buscar por nombre"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -235,113 +335,162 @@ export default function FondosPage() {
           </div>
         </div>
 
-        {/* Headers de columna */}
-        <div className="bg-white rounded-t-lg shadow-lg">
-          <div className="grid grid-cols-6 gap-4 p-4 bg-gray-100 border-b border-gray-200 font-semibold text-gray-700 text-sm">
-            <div>Nombre del Fondo</div>
-            <div>Tipo de Fondo</div>
-            <div>TRL</div>
-            <div>Financiamiento</div>
-            <div>Duración</div>
-            <div>Estado</div>
+        {/* Loading / Error / No Results - AÑADIR TODO ESTE BLOQUE AQUÍ */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow-sm">
+            <Spinner size={48} className="text-blue-600 mb-4" />
+            <p className="text-lg text-gray-600">
+              Cargando fondos... Por favor, espere.
+            </p>
           </div>
-        </div>
+        ) : errorLocal ? (
+          <Alert variant="destructive" className="bg-red-50 text-red-700">
+            <XCircle className="h-5 w-5 mr-4" />
+            <AlertTitle>Error al cargar fondos</AlertTitle>
+            <AlertDescription>{errorLocal}</AlertDescription>
+          </Alert>
+        ) : filteredFondos.length === 0 ? (
+          <Alert variant="default" className="bg-blue-50 text-blue-700">
+            <Info className="h-5 w-5 mr-4" />
+            <AlertTitle>No hay fondos</AlertTitle>
+            <AlertDescription>
+              No se encontraron fondos con los filtros o búsqueda actuales.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <>
+            {" "}
+            {/* Fragment para envolver los dos divs siguientes (Headers y Lista) */}
+            {/* Headers de columna */}
+            <div className="bg-white rounded-t-lg shadow-lg">
+              <div className="grid grid-cols-6 gap-4 p-4 bg-gray-100 border-b border-gray-200 font-semibold text-gray-700 text-sm items-center">
+                <div className="text-center">Nombre del Fondo</div>{" "}
+                {/* Alineado a la izquierda */}
+                <div className="text-center">Tipo de Fondo</div>{" "}
+                {/* Alineado al centro */}
+                <div className="text-center">TRL</div>{" "}
+                {/* Alineado al centro */}
+                <div className="text-center">Financiamiento</div>{" "}
+                {/* Alineado a la derecha */}
+                <div className="text-center">Duración</div>{" "}
+                {/* Alineado al centro */}
+                <div className="text-center">Estado</div>{" "}
+                {/* Alineado al centro */}
+              </div>
+            </div>
+            {/* Lista de fondos */}
+            <div className="bg-white rounded-b-lg shadow-lg overflow-hidden px-4">
+              {/* El componente Accordion principal */}
+              <Accordion type="single" collapsible className="w-full">
+                {filteredFondos.map((fondo) => (
+                  <AccordionItem
+                    value={`item-${fondo.id}`}
+                    key={fondo.id}
+                    className="border-b border-gray-200"
+                  >
+                    <AccordionTrigger>
+                      {/* Aquí puedes poner un solo <div> o incluso directamente los <span> y <div> de las columnas */}
+                      <div className="grid grid-cols-6 gap-4 w-full items-center py-2">
+                        <div className="text-left flex items-center gap-2">
+                          {renderTipoFondoLogo(fondo.tipo_nombre)}
+                          <span className="font-medium text-gray-900">
+                            {fondo.nombre}
+                          </span>
+                        </div>
+                        {/* Columna de Tipo de Fondo (nombre de la convocatoria) */}
+                        <div className="text-center">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${getTipoFondoColor(fondo.tipo_nombre)}`}
+                          >
+                            {fondo.tipo_nombre}
+                          </span>
+                        </div>
+                        {/* TRL */}
+                        <div className="text-center">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${getTRLColor(fondo.trl === null ? "Sin información" : String(fondo.trl))}`}
+                          >
+                            {fondo.trl === null
+                              ? "Sin información"
+                              : `TRL ${fondo.trl}`}
+                          </span>
+                        </div>
+                        <div className="text-center text-gray-700 font-medium">
+                          {fondo.financiamiento || "Sin información"}
+                        </div>
+                        <div className="text-center text-gray-700">
+                          {fondo.plazo || "Sin información"}
+                        </div>
+                        <div className="text-center">
+                          {" "}
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${getEstadoBadgeColor(fondo.estado_vigencia === "Vigente")}`}
+                          >
+                            {fondo.estado_vigencia}
+                          </span>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    {/* AccordionContent es el detalle que se expande */}
+                    <AccordionContent className="bg-gray-50 p-6 border-t border-gray-200">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Objetivo */}
+                        <div>
+                          <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                            <Target className="w-4 h-4 mr-2 text-gray-600" />
+                            Objetivo:
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {fondo.objetivo ||
+                              "No se ha especificado el objetivo para este fondo."}
+                          </p>
+                        </div>
 
-        {/* Lista de fondos */}
-        <div className="bg-white rounded-b-lg shadow-lg overflow-hidden px-4">
-          {/* El componente Accordion principal */}
-          {/* type="single" asegura que solo un elemento se expanda a la vez */}
-          <Accordion type="single" collapsible className="w-full">
-            {fondos.map((fondo) => (
-              <AccordionItem
-                value={`item-${fondo.id}`}
-                key={fondo.id}
-                className="border-b border-gray-200"
-              >
-                <AccordionTrigger>
-                  {/* Aquí puedes poner un solo <div> o incluso directamente los <span> y <div> de las columnas */}
-                  <div className="grid grid-cols-6 gap-4 w-full items-center">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 border-2 border-blue-400 rounded-full"></div>
-                      <span className="font-medium text-gray-900">
-                        {fondo.nombre}
-                      </span>
-                    </div>
-                    <div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-bold ${getInstitucionColor(fondo.institucion)}`}
-                      >
-                        {fondo.institucion}
-                      </span>
-                    </div>
-                    <div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-bold ${getTRLColor(fondo.trl)}`}
-                      >
-                        {fondo.trl}
-                      </span>
-                    </div>
-                    <div className="text-gray-700 font-medium">
-                      {fondo.monto}
-                    </div>
-                    <div className="text-gray-700">{fondo.duracion}</div>
-                    <div>
-                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-500 text-white">
-                        {fondo.estado}
-                      </span>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                {/* AccordionContent es el detalle que se expande */}
-                <AccordionContent className="bg-gray-50 p-6 border-t border-gray-200">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Objetivo */}
-                    <div>
-                      <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                        <Target className="w-4 h-4 mr-2 text-gray-600" />
-                        Objetivo:
-                      </h4>
-                      <p className="text-sm text-gray-600">{fondo.objetivo}</p>
-                    </div>
+                        {/* Requisitos */}
+                        <div>
+                          <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                            <ClipboardList className="w-4 h-4 mr-2 text-gray-600" />
+                            Requisitos:
+                          </h4>
+                          {fondo.req && fondo.req !== "" ? (
+                            <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                              {/* Ajuste para requisitos: Dividir por saltos de línea y filtrar vacíos */}
+                              {fondo.req
+                                .split(/[\r\n]/)
+                                .map((req, i) =>
+                                  req.trim() ? (
+                                    <li key={i}>{req.trim()}</li>
+                                  ) : null
+                                )}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-gray-600">
+                              No hay requisitos detallados disponibles.
+                            </p>
+                          )}
+                        </div>
 
-                    {/* Requisitos */}
-                    <div>
-                      <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                        <ClipboardList className="w-4 h-4 mr-2 text-gray-600" />
-                        Requisitos:
-                      </h4>
-                      {fondo.requisitos && fondo.requisitos.length > 0 ? (
-                        <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                          {fondo.requisitos.map((req, i) => (
-                            <li key={i}>{req}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-600">
-                          No hay requisitos detallados disponibles.
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Fechas Importantes */}
-                    <div className="md:col-span-2">
-                      <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                        <Calendar className="w-4 h-4 mr-2 text-gray-600" />
-                        Fechas Importantes:
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        Inicio: {fondo.fechaInicio}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Cierre: {fondo.fechaCierre}
-                      </p>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
+                        {/* Fechas Importantes */}
+                        <div className="md:col-span-2">
+                          <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                            <Calendar className="w-4 h-4 mr-2 text-gray-600" />
+                            Fechas Importantes:
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            Inicio: {formatDate(fondo.inicio)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Cierre: {formatDate(fondo.cierre)}
+                          </p>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

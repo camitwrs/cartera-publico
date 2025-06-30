@@ -485,7 +485,7 @@ export default function VisualizacionPage() {
           <div className="text-sm text-gray-500">
             Mostrando{" "}
             {/* Si sortedProjects está vacío, el endIndex podría ser negativo o 0 */}
-            {sortedProjects.length > 0 ? startIndex + 1 : 0} -{" "}
+           
             {Math.min(sortedProjects.length, endIndex)} de{" "}
             {sortedProjects.length} proyectos
           </div>

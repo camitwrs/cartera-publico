@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   BarChart3,
   Calendar,
@@ -11,103 +11,204 @@ import {
   School,
   User,
   Users,
+  XCircle,
+  List,
+  Info,
 } from "lucide-react";
 
+import { Spinner } from "@/components/ui/spinner"; // Importa el Spinner de Shadcn
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Importa Alert de Shadcn
+import { Button } from "@/components/ui/button"; // Importa Button de Shadcn
+import { Input } from "@/components/ui/input"; // Importa Input de Shadcn
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { useError } from "@/contexts/ErrorContext"; // Importa tu hook de error global
+
+import respuestasCuestionarioService from "../api/respuestas-cuestionario.js";
+import academicosService from "../api/academicos.js";
+import unidadesAcademicasService from "../api/unidadesacademicas.js";
+import cuestionariosService from "../api/cuestionarios.js";
+
 export default function FormulariosPage() {
-  // Datos exactos de la imagen
-  const respuestas = [
-    {
-      id: 1,
-      nombre: "SEBASTIÁN CARLOS",
-      escuela: "Escuela de Ingeniería Bioquímica",
-      fecha: "14 de junio de 2025",
-      esHoy: false,
-      seleccionado: true,
-    },
-    {
-      id: 2,
-      nombre: "A",
-      escuela: "CREAS",
-      fecha: "22 de junio de 2025",
-      esHoy: true,
-      seleccionado: false,
-    },
-    {
-      id: 3,
-      nombre: "Camila",
-      escuela: "Escuela de Ingeniería Industrial",
-      fecha: "22 de junio de 2025",
-      esHoy: true,
-      seleccionado: false,
-    },
-    {
-      id: 4,
-      nombre: "Juan",
-      escuela: "Escuela de Ingeniería",
-      fecha: "22 de junio de 2025",
-      esHoy: true,
-      seleccionado: false,
-    },
-  ];
+  // Estados para los datos reales de la API
+  const [respuestasData, setRespuestasData] = useState([]); // Todas las respuestas del cuestionario
+  const [preguntasData, setPreguntasData] = useState([]); // Preguntas del cuestionario
 
-  const preguntas = [
-    {
-      numero: 1,
-      texto:
-        "¿Qué es la tecnología o resultado de investigación en la que se basa su proyecto?",
-      respuesta: "Sin respuesta",
-    },
-    {
-      numero: 2,
-      texto: "¿Qué problema o necesidad resuelve?",
-      respuesta: "Sin respuesta",
-    },
-    {
-      numero: 3,
-      texto:
-        "¿Quién tiene ese problema o necesidad? ¿Ha tenido acercamientos con él/a o ellos/as?",
-      respuesta: "Sin respuesta",
-    },
-    {
-      numero: 4,
-      texto: "¿Por qué es importante resolver ese problema o necesidad?",
-      respuesta: "Sin respuesta",
-    },
-  ];
+  // Mapas para IDs a Nombres
+  const [academicosMap, setAcademicosMap] = useState({}); // id_academico -> {nombre_completo, ...}
+  const [unidadesMap, setUnidadesMap] = useState({}); // id_unidad -> {nombre, ...}
 
-  // Obtener listas únicas para los selects
-  const academicos = [...new Set(respuestas.map((r) => r.nombre))];
-  const escuelas = [...new Set(respuestas.map((r) => r.escuela))];
+  // Estados de carga y error
+  const [loading, setLoading] = useState(true);
+  const [errorLocal, setErrorLocal] = useState(null);
+  const { setError: setErrorGlobal } = useError();
 
-  // Estados de filtro
-  const [filtroAcademico, setFiltroAcademico] = useState("");
-  const [filtroEscuela, setFiltroEscuela] = useState("");
-  const [filtroFecha, setFiltroFecha] = useState("");
-  const [respuestaSeleccionadaId, setRespuestaSeleccionadaId] = useState(
-    respuestas[0].id
-  );
+  const [filtroAcademico, setFiltroAcademico] = useState("todos"); // Valor "todos" para select
+  const [filtroEscuela, setFiltroEscuela] = useState("todos"); // Valor "todos" para select
+  const [filtroFecha, setFiltroFecha] = useState(""); // Fecha en formato YYYY-MM-DD
+  const [respuestaSeleccionadaId, setRespuestaSeleccionadaId] = useState(null); // No seleccionar nada al inicio
 
-  // Filtrar respuestas según los filtros seleccionados
-  const respuestasFiltradas = respuestas.filter((r) => {
-    const coincideAcademico = !filtroAcademico || r.nombre === filtroAcademico;
-    const coincideEscuela = !filtroEscuela || r.escuela === filtroEscuela;
-    const coincideFecha = !filtroFecha || r.fecha === filtroFecha;
+  // --- Funciones Helper ---
+  // Formatear fecha para la UI
+  const formatDate = useCallback((dateString) => {
+    if (!dateString) return "Sin fecha";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Fecha Inválida"; // Usa getTime() para NaN check
+      const options = { year: "numeric", month: "long", day: "numeric" };
+      return date.toLocaleDateString("es-CL", options);
+    } catch (e) {
+      console.error("Error formatting date:", e);
+      return "Fecha Inválida";
+    }
+  }, []);
+
+  // Determinar si una fecha es "Hoy"
+  const isToday = useCallback((dateString) => {
+    if (!dateString) return false;
+    try {
+      const date = new Date(dateString);
+      const today = new Date();
+      return (
+        date.getFullYear() === today.getFullYear() &&
+        date.getMonth() === today.getMonth() &&
+        date.getDate() === today.getDate()
+      );
+    } catch (e) {
+      return false;
+    }
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setErrorLocal(null);
+    setErrorGlobal(null);
+    try {
+      // Realizar todas las llamadas a la API en paralelo
+      const [respuestasRes, academicosRes, unidadesRes, cuestionariosRes] =
+        await Promise.all([
+          respuestasCuestionarioService.getAllRespuestasCuestionario(),
+          academicosService.getAllAcademicos(),
+          unidadesAcademicasService.getAllUnidadesAcademicas(),
+          cuestionariosService.getAllCuestionarios(),
+        ]);
+
+      // Procesar datos de académicos: id -> {nombre_completo, ...}
+      const newAcademicosMap = academicosRes.reduce((map, acad) => {
+        map[acad.id_academico] = {
+          ...acad,
+          nombre_completo:
+            `${acad.nombre} ${acad.a_paterno || ""} ${acad.a_materno || ""}`.trim(),
+        };
+        return map;
+      }, {});
+      setAcademicosMap(newAcademicosMap);
+
+      // Procesar datos de unidades: id -> {nombre, ...}
+      const newUnidadesMap = unidadesRes.reduce((map, unidad) => {
+        map[unidad.id_unidad] = unidad;
+        return map;
+      }, {});
+      setUnidadesMap(newUnidadesMap); // Necesitarás este estado si quieres el nombre de la escuela
+
+      // Procesar preguntas: id -> pregunta (para fácil acceso)
+      const newPreguntasMap = cuestionariosRes.reduce((map, q) => {
+        map[q.id_cuestionario] = q.pregunta;
+        return map;
+      }, {});
+      setPreguntasData(newPreguntasMap); // Guardar el mapa de preguntas
+
+      // Procesar respuestas: mapear IDs a nombres
+      const processedRespuestas = respuestasRes.map((res) => {
+        const academico = newAcademicosMap[res.nombre_investigador];
+
+        const unidad = newUnidadesMap[academico?.id_unidad]; // Acceder a la unidad a través del académico
+
+        return {
+          id: res.id, // ID de la respuesta
+          nombre: academico?.nombre_completo || "Desconocido",
+          escuela: unidad?.nombre || "Desconocida", // Nombre de la unidad/escuela
+          fecha: res.fecha_creacion, // Fecha en formato ISO string
+          // Mapear respuestas a las preguntas (asumiendo respuesta_1 a respuesta_9)
+          respuestas: Object.keys(res)
+            .filter((key) => key.startsWith("respuesta_"))
+            .map((key) => ({
+              numero: parseInt(key.replace("respuesta_", ""), 10),
+              texto:
+                newPreguntasMap[parseInt(key.replace("respuesta_", ""), 10)] ||
+                `Pregunta ${key.replace("respuesta_", "")}`, // Texto de la pregunta
+              respuesta: res[key] || "Sin respuesta", // La respuesta dada
+            }))
+            .sort((a, b) => a.numero - b.numero), // Ordenar por número de pregunta
+        };
+      });
+
+      setRespuestasData(processedRespuestas);
+      if (processedRespuestas.length > 0) {
+        setRespuestaSeleccionadaId(processedRespuestas[0].id); // Seleccionar la primera respuesta por defecto
+      }
+    } catch (err) {
+      console.error("Error fetching data for FormulariosPage:", err);
+      setErrorLocal(
+        err.message || "Error desconocido al cargar los formularios."
+      );
+      setErrorGlobal(err.message || "Error al cargar los formularios.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Efecto para llamar a fetchData al montar el componente
+  useEffect(() => {
+    fetchData();
+  }, []); // El array vacío asegura que se ejecute una sola vez al montar
+
+  // Opciones únicas para los Selects de filtro (basadas en respuestasData)
+  const uniqueAcademicos = [...new Set(respuestasData.map((r) => r.nombre))]
+    .filter(Boolean)
+    .sort();
+  const uniqueEscuelas = [...new Set(respuestasData.map((r) => r.escuela))]
+    .filter(Boolean)
+    .sort();
+  // Las fechas se mostrarán en el filtro de fecha, no en un select.
+
+  // Esta es la versión CORRECTA de la lógica para el filtro
+  const respuestasFiltradas = respuestasData.filter((r) => {
+    // Ambas variables se definen aquí, en el ámbito de este callback
+    const coincideAcademico =
+      filtroAcademico === "todos" || r.nombre === filtroAcademico;
+    const coincideEscuela =
+      filtroEscuela === "todos" || r.escuela === filtroEscuela;
+    const coincideFecha =
+      !filtroFecha || (r.fecha && r.fecha.startsWith(filtroFecha));
+
     return coincideAcademico && coincideEscuela && coincideFecha;
   });
-
-  // Si la respuesta seleccionada no está en las filtradas, selecciona la primera
+  // Si la respuesta seleccionada no está en las filtradas, o no hay nada seleccionado,
+  // selecciona la primera de las filtradas (o null si no hay ninguna)
   const respuestaSeleccionada =
     respuestasFiltradas.find((r) => r.id === respuestaSeleccionadaId) ||
-    respuestasFiltradas[0];
+    respuestasFiltradas[0] ||
+    null; // Si no hay respuestas filtradas, null.
 
-  // Si la respuesta seleccionada cambió por el filtro, actualiza el id
-  // (esto evita que quede seleccionada una respuesta que ya no está visible)
-  if (
-    respuestaSeleccionada &&
-    respuestaSeleccionada.id !== respuestaSeleccionadaId
-  ) {
-    setTimeout(() => setRespuestaSeleccionadaId(respuestaSeleccionada.id), 0);
-  }
+  // Efecto para actualizar `respuestaSeleccionadaId` si la `respuestaSeleccionada` cambia
+  // Esto asegura que la selección visual sea correcta después de filtrar.
+  useEffect(() => {
+    if (
+      respuestaSeleccionada &&
+      respuestaSeleccionada.id !== respuestaSeleccionadaId
+    ) {
+      setRespuestaSeleccionadaId(respuestaSeleccionada.id);
+    } else if (!respuestaSeleccionada && respuestaSeleccionadaId !== null) {
+      setRespuestaSeleccionadaId(null); // Si no hay respuesta seleccionada, resetear el ID.
+    }
+  }, [respuestaSeleccionada, respuestaSeleccionadaId]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,41 +232,44 @@ export default function FormulariosPage() {
 
               {/* Filtro Académico */}
               <div className="relative">
-                <select
-                  className="px-2 w-50 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white min-w-48"
+                <Select
                   value={filtroAcademico}
-                  onChange={(e) => setFiltroAcademico(e.target.value)}
+                  onValueChange={setFiltroAcademico}
                 >
-                  <option value="">Todos los académicos</option>
-                  {academicos.map((nombre) => (
-                    <option key={nombre} value={nombre}>
-                      {nombre}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <SelectTrigger className="px-2 w-50 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white min-w-48">
+                    <SelectValue placeholder="Todos los académicos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos los académicos</SelectItem>
+                    {uniqueAcademicos.map((nombre) => (
+                      <SelectItem key={nombre} value={nombre}>
+                        {nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Filtro Escuela */}
               <div className="relative">
-                <select
-                  className="px-2 w-72 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white min-w-48"
-                  value={filtroEscuela}
-                  onChange={(e) => setFiltroEscuela(e.target.value)}
-                >
-                  <option value="">Todas las escuelas</option>
-                  {escuelas.map((escuela) => (
-                    <option key={escuela} value={escuela}>
-                      {escuela}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                <Select value={filtroEscuela} onValueChange={setFiltroEscuela}>
+                  <SelectTrigger className="px-2 w-72 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white min-w-48">
+                    <SelectValue placeholder="Todas las escuelas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas las escuelas</SelectItem>
+                    {uniqueEscuelas.map((escuela) => (
+                      <SelectItem key={escuela} value={escuela}>
+                        {escuela}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Filtro Fecha */}
               <div className="relative">
-                <input
+                <Input
                   type="date"
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white min-w-48"
                   value={filtroFecha}
@@ -174,17 +278,17 @@ export default function FormulariosPage() {
               </div>
             </div>
 
-            <div className="flex space-x-3">
-              <button
+            <div className="flex items-center space-x-3">
+              <Button
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 onClick={() => {
-                  setFiltroAcademico("");
-                  setFiltroEscuela("");
+                  setFiltroAcademico("todos");
+                  setFiltroEscuela("todos");
                   setFiltroFecha("");
                 }}
               >
-                Limpiar filtros
-              </button>
+                Reiniciar filtros
+              </Button>
               <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2">
                 <Download className="h-4 w-4" />
                 <span>Generar PDF</span>
@@ -196,50 +300,78 @@ export default function FormulariosPage() {
         {/* Layout principal */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Lista de respuestas */}
-          <div className="bg-white rounded-lg shadow-lg">
-            <div className="p-6 border-b border-gray-200">
+          <div className="bg-white rounded-lg shadow-lg ">
+            <div className="p-6 border-b border-gray-200 flex items-center space-x-3">
+              <List className="h-6 w-6 text-gray-600" />
               <h3 className="text-lg font-semibold text-gray-900">
                 Lista de respuestas
               </h3>
             </div>
-            <div className="divide-y divide-gray-200">
-              {respuestas.map((respuesta) => (
-                <div
-                  key={respuesta.id}
-                  onClick={() => setRespuestaSeleccionadaId(respuesta.id)}
-                  className={`p-6 cursor-pointer transition-colors ${
-                    respuestaSeleccionadaId === respuesta.id
-                      ? "bg-blue-50 border-l-4 border-blue-500"
-                      : "hover:bg-gray-50 border-l-4 border-transparent"
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h4 className="text-lg font-semibold text-gray-900">
-                          {respuesta.nombre}
-                        </h4>
-                        {respuesta.esHoy && (
-                          <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
-                            Hoy
-                          </span>
-                        )}
-                      </div>
 
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <School className="h-4 w-4" />
-                          <span>Escuela: {respuesta.escuela}</span>
+            <div className="divide-y divide-gray-200">
+              {loading ? ( // Mostrar spinner si está cargando
+                <div className="flex justify-center items-center h-48 py-8">
+                  <Spinner size={32} className="text-[#2E5C8A]" />
+                </div>
+              ) : errorLocal ? ( // Mostrar error si hay
+                <Alert
+                  variant="destructive"
+                  className="bg-red-50 text-red-700 mx-4 my-4"
+                >
+                  <XCircle className="h-5 w-5 mr-4" />
+                  <AlertTitle>Error al cargar respuestas</AlertTitle>
+                  <AlertDescription>{errorLocal}</AlertDescription>
+                </Alert>
+              ) : respuestasFiltradas.length === 0 ? ( // Mostrar mensaje si no hay resultados
+                <Alert
+                  variant="default"
+                  className="bg-blue-50 text-blue-700 mx-4 my-4"
+                >
+                  <Info className="h-5 w-5 mr-4" />
+                  <AlertTitle>No hay respuestas</AlertTitle>
+                  <AlertDescription>
+                    No se encontraron respuestas con los filtros actuales.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                respuestasFiltradas.map((respuesta) => (
+                  <div
+                    key={respuesta.id}
+                    onClick={() => setRespuestaSeleccionadaId(respuesta.id)}
+                    className={`p-6 cursor-pointer transition-colors ${
+                      respuestaSeleccionadaId === respuesta.id
+                        ? "bg-blue-50 border-l-4 border-blue-500"
+                        : "hover:bg-gray-50 border-l-4 border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            {respuesta.nombre}
+                          </h4>
+                          {isToday(respuesta.fecha) && (
+                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
+                              Hoy
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <Calendar className="h-4 w-4" />
-                          <span>{respuesta.fecha}</span>
+
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2 text-sm text-gray-600">
+                            <School className="h-4 w-4" />
+                            <span>Escuela: {respuesta.escuela}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-gray-600">
+                            <Calendar className="h-4 w-4" />
+                            <span>{formatDate(respuesta.fecha)}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -291,7 +423,7 @@ export default function FormulariosPage() {
                         </span>
                       </div>
                       <p className="font-semibold text-gray-900">
-                        {respuestaSeleccionada.fecha}
+                        {formatDate(respuestaSeleccionada.fecha)}
                       </p>
                     </div>
                   </div>
@@ -307,22 +439,22 @@ export default function FormulariosPage() {
                   </div>
 
                   <div className="space-y-6">
-                    {preguntas.map((pregunta) => (
+                    {respuestaSeleccionada.respuestas.map((itemRespuesta) => (
                       <div
-                        key={pregunta.numero}
+                        key={itemRespuesta.numero}
                         className="border border-gray-200 rounded-lg p-4"
                       >
                         <div className="mb-3">
                           <h5 className="font-semibold text-gray-900 mb-2">
-                            Pregunta {pregunta.numero}
+                            Pregunta {itemRespuesta.numero}
                           </h5>
                           <p className="text-gray-700 italic">
-                            {pregunta.texto}
+                            {itemRespuesta.texto}
                           </p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-gray-500 italic">
-                            {pregunta.respuesta}
+                            {itemRespuesta.respuesta || "Sin respuesta"}
                           </p>
                         </div>
                       </div>

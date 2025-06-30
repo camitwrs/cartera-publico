@@ -26,8 +26,8 @@ import { useError } from "@/contexts/ErrorContext";
 import { useExportData } from "@/hooks/useExportData";
 
 // Importa los iconos de los archivos si los vas a seguir usando así
-import pdfIcon from '../assets/icons/file-pdf-regular.svg';
-import excelIcon from '../assets/icons/excel2-svgrepo-com.svg';
+import pdfIcon from "../assets/icons/file-pdf-regular.svg";
+import excelIcon from "../assets/icons/excel2-svgrepo-com.svg";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -76,93 +76,6 @@ export default function HomePage() {
   useEffect(() => {
     fetchData();
   }, []);
-
-  const estadisticas = {
-    totalProyectos: 24,
-    proyectosActivos: 12,
-    proyectosCompletados: 8,
-    enRevision: 4,
-    montoTotal: 2450000,
-    fondosDisponibles: 3,
-  };
-
-  const proyectosRecientes = [
-    {
-      id: 1,
-      nombre: "Sistema de Gestión Inteligente",
-      investigadorPrincipal: "Dr. María González",
-      unidad: "Ingeniería de Sistemas",
-      estatus: "En Progreso",
-      fechaPostulacion: "2024-01-15",
-      monto: 150000,
-      tematica: "Inteligencia Artificial",
-    },
-    {
-      id: 2,
-      nombre: "Optimización de Procesos Industriales",
-      investigadorPrincipal: "Dr. Carlos Rodríguez",
-      unidad: "Ingeniería Industrial",
-      estatus: "En Revisión",
-      fechaPostulacion: "2024-01-10",
-      monto: 200000,
-      tematica: "Automatización",
-    },
-    {
-      id: 3,
-      nombre: "Desarrollo de Materiales Sostenibles",
-      investigadorPrincipal: "Dra. Ana Martínez",
-      unidad: "Ingeniería Química",
-      estatus: "Completado",
-      fechaPostulacion: "2023-12-20",
-      monto: 180000,
-      tematica: "Sustentabilidad",
-    },
-  ];
-
-  const fondosActivos = [
-    {
-      id: 1,
-      nombre: "FONDECYT Regular 2024",
-      cierre: "2024-03-15",
-      financiamiento: "Hasta $300,000",
-      institucion: "ANID",
-    },
-    {
-      id: 2,
-      nombre: "Fondef IDeA I+D",
-      cierre: "2024-04-30",
-      financiamiento: "Hasta $500,000",
-      institucion: "ANID",
-    },
-  ];
-
-  const notificaciones = [
-    {
-      id: 1,
-      tipo: "revision",
-      titulo: "Revisión pendiente",
-      descripcion: "Proyecto Sistema de Gestión requiere revisión",
-      fecha: "Hace 2 horas",
-    },
-    {
-      id: 2,
-      tipo: "completado",
-      titulo: "Proyecto completado",
-      descripcion: "Desarrollo de Materiales Sostenibles finalizado",
-      fecha: "Ayer",
-    },
-    {
-      id: 3,
-      tipo: "fondo",
-      titulo: "Nueva convocatoria",
-      descripcion: "FONDECYT Regular 2024 abierta",
-      fecha: "Hace 3 días",
-    },
-  ];
-
-  const handleNavbarNavigation = (path) => {
-    navigate(path);
-  };
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
@@ -230,7 +143,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">
-                  Total Proyectos
+                  Total de Proyectos
                 </p>
                 {loadingQuickStats ? (
                   <div className="flex justify-center items-center h-8">
@@ -252,7 +165,9 @@ export default function HomePage() {
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Postulados</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Proyectos Postulados
+                </p>
                 {loadingQuickStats ? (
                   <div className="flex justify-center items-center h-8">
                     <Spinner size={24} className="text-green-600" />
@@ -273,7 +188,9 @@ export default function HomePage() {
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Perfilados</p>
+                <p className="text-sm font-medium text-gray-600 ">
+                  Proyectos Perfilados
+                </p>
                 {loadingQuickStats ? (
                   <div className="flex justify-center items-center h-8">
                     <Spinner size={24} className="text-purple-600" />
@@ -303,7 +220,7 @@ export default function HomePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button
-                  className="h-20 bg-[#7bb6e9] hover:bg-[#75a9d9] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
+                  className="h-20 bg-[#469ae3] hover:bg-[#75a9d9] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
                   size="lg"
                   onClick={() => navigate("/visualizacion")}
                 >
