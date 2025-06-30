@@ -46,7 +46,7 @@ export default function HomePage() {
     ? proyectosCrudosData.filter((p) => p.estatus === "Postulado").length
     : 0;
   const perfiladosCount = Array.isArray(proyectosCrudosData)
-    ? proyectosCrudosData.filter((p) => p.estatus === "Perfilado").length
+    ? proyectosCrudosData.filter((p) => p.estatus === "Perfil").length
     : 0;
 
   const fetchData = async () => {
