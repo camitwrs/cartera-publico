@@ -128,12 +128,12 @@ export default function FormulariosPage() {
       const processedRespuestas = respuestasRes.map((res) => {
         const academico = newAcademicosMap[res.nombre_investigador];
 
-        const unidad = newUnidadesMap[academico?.id_unidad]; // Acceder a la unidad a través del académico
+        const unidadAcademica = newUnidadesMap[res.escuela]; // Acceder a la unidad a través del académico
 
         return {
           id: res.id, // ID de la respuesta
           nombre: academico?.nombre_completo || "Desconocido",
-          escuela: unidad?.nombre || "Desconocida", // Nombre de la unidad/escuela
+          escuela: unidadAcademica?.nombre || "Desconocida", // Nombre de la unidad/escuela
           fecha: res.fecha_creacion, // Fecha en formato ISO string
           // Mapear respuestas a las preguntas (asumiendo respuesta_1 a respuesta_9)
           respuestas: Object.keys(res)

@@ -220,7 +220,7 @@ export default function HomePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button
-                  className="h-20 bg-[#469ae3] hover:bg-[#75a9d9] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
+                  className="h-20 bg-gradient-to-r from-[#2463a2] to-[#669dd8] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
                   size="lg"
                   onClick={() => navigate("/visualizacion")}
                 >
@@ -239,7 +239,7 @@ export default function HomePage() {
                 </Button>
 
                 <Button
-                  className="h-20 bg-[#3172b3] hover:bg-[#617fac] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
+                  className="h-20 bg-gradient-to-r from-[#2463a2] to-[#669dd8] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
                   onClick={() => navigate("/anadir-proyectos")}
                   size="lg"
                 >
@@ -258,7 +258,7 @@ export default function HomePage() {
                 </Button>
 
                 <Button
-                  className="h-20 bg-[#4c86e2] hover:bg-[#82b2ff] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
+                  className="h-20 bg-gradient-to-r from-[#2463a2] to-[#669dd8] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
                   size="lg"
                   onClick={() => navigate("/editar-proyectos")}
                 >
@@ -277,7 +277,7 @@ export default function HomePage() {
                 </Button>
 
                 <Button
-                  className="h-20 bg-[#16457e] hover:bg-[#314c63] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
+                  className="h-20 bg-gradient-to-r from-[#2463a2] to-[#669dd8] text-white justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer"
                   size="lg"
                   onClick={() => navigate("/estadisticas")}
                 >
