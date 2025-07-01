@@ -7,9 +7,9 @@ export default function Footer() {
           {/* Escudo PUCV y Texto (como una unidad) */}
           <div className="flex items-center space-x-2">
             <img
-              src="/images/Escudo-PUCV.svg"
-              alt="Escudo PUCV"
-              className="h-16 w-auto"
+              src="/images/logo-fin.png"
+              alt="Logo Facultad Ingenieria PUCV"
+              className="h-20 w-auto"
             />
           </div>
         </div>

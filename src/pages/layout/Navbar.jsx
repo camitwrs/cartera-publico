@@ -1,3 +1,4 @@
+// src/components/Navbar.jsx
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,32 +12,30 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
+} from "@/components/ui/sheet"; // Importar Sheet para menú responsivo
 import {
   BarChart3,
   Home,
-  FileText, // Icono para Cartera de Proyectos (el menú)
+  FileText,
   User,
   ChevronDown,
   BarChart,
   DollarSign,
   ClipboardList,
-  Menu,
-  Plus, // Icono para Añadir Proyecto
-  Edit, // Icono para Editar Proyectos
+  Plus,
+  Edit,
+  Menu, // Icono para el menú hamburguesa
 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom"; // Importar hooks de react-router-dom
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const location = useLocation(); // Hook para obtener la ubicación actual
+  const location = useLocation();
 
-  // Función para manejar la navegación
   const handleNavItemClick = (path) => {
     navigate(path);
   };
 
-  // Función auxiliar para determinar si un elemento de navegación debe estar activo
   const isActive = (paths) => {
     const pathArray = Array.isArray(paths) ? paths : [paths];
     return pathArray.some((path) => location.pathname === path);
