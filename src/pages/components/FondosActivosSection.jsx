@@ -19,7 +19,7 @@ const FONDO_LOGOS = {
   ANID: anidLogo,
   CORFO: corfoLogo,
   GORE: goreLogo,
-  "Internas PUCV": internasPucvLogo,
+  Internas: internasPucvLogo,
   PRIVADA: privadaLogo,
 };
 

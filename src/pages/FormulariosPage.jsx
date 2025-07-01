@@ -155,10 +155,10 @@ export default function FormulariosPage() {
       }
     } catch (err) {
       console.error("Error fetching data for FormulariosPage:", err);
-      setErrorLocal(
-        err.message || "Error desconocido al cargar los formularios."
-      );
-      setErrorGlobal(err.message || "Error al cargar los formularios.");
+      setErrorGlobal({
+        type: "error", // Forzar a tipo error si falló
+        title: "Error al cargar los formularios.",
+      });
     } finally {
       setLoading(false);
     }

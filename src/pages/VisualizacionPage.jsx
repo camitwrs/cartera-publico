@@ -152,7 +152,12 @@ export default function VisualizacionPage() {
           setAcademicosFotos(photosToLoad); // Actualizar el estado con las nuevas fotos
         } catch (err) {
           console.error("Error fetching academic photos:", err);
-          setErrorGlobal("Error al cargar las fotos de los académicos.");
+
+          setErrorGlobal({
+            type: "error", // Forzar a tipo error si falló
+            title: "Error al cargar las fotos de los académicos.",
+          });
+
           // En caso de error, llenar con placeholders y guardar en caché el placeholder
           idsToFetch.forEach((id) => {
             photosToLoad[id] = FALLBACK_PHOTO_URL;
@@ -207,7 +212,10 @@ export default function VisualizacionPage() {
       setErrorLocal(
         err.message || "Error desconocido al cargar los proyectos."
       );
-      setErrorGlobal(err.message || "Error al cargar los proyectos.");
+      setErrorGlobal({
+        type: "error", // Forzar a tipo error si falló
+        title: "Error al cargar los proyectos",
+      });
     } finally {
       setLoading(false);
     }
@@ -400,30 +408,30 @@ export default function VisualizacionPage() {
           onValueChange={setSelectedStatus}
           className="mb-6"
         >
-          <TabsList className="bg-white border border-gray-100">
+          <TabsList className="flex flex-nowrap overflow-hidden bg-white border border-gray-100 rounded-md w-full">
             <TabsTrigger
               value="todos"
-              className="data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
+              className="text-xs px-1.5 py-1 sm:text-sm sm:px-3 sm:py-2 data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
             >
               Todos ({projectsData.length})
             </TabsTrigger>
             <TabsTrigger
               value="Postulado"
-              className="data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
+              className="text-xs px-1.5 py-1 sm:text-sm sm:px-3 sm:py-2 data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
             >
               Postulados (
               {projectsData.filter((p) => p.estatus === "Postulado").length})
             </TabsTrigger>
             <TabsTrigger
               value="Adjudicado"
-              className="data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
+              className="text-xs px-1.5 py-1 sm:text-sm sm:px-3 sm:py-2 data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
             >
               Adjudicados (
               {projectsData.filter((p) => p.estatus === "Adjudicado").length})
             </TabsTrigger>
             <TabsTrigger
               value="Perfil"
-              className="data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
+              className="text-xs px-1.5 py-1 sm:text-sm sm:px-3 sm:py-2 data-[state=active]:bg-[#2E5C8A] data-[state=active]:text-white"
             >
               Perfil (
               {projectsData.filter((p) => p.estatus === "Perfil").length})

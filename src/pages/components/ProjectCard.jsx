@@ -19,6 +19,7 @@ import corfoLogo from "../../assets/tipos_convocatorias/corfo2024.png";
 import goreLogo from "../../assets/tipos_convocatorias/gore-valpo.jpg";
 import sqmLogo from "../../assets/instituciones/sqm.png";
 import codesserLogo from "../../assets/instituciones/logo-codesser2.png";
+import pucvLogo from "../../assets/instituciones/pucv.svg";
 
 const INSTITUCION_LOGOS = {
   ANID: anidLogo,
@@ -26,6 +27,7 @@ const INSTITUCION_LOGOS = {
   "GORE-Valparaíso": goreLogo,
   SQM: sqmLogo,
   CODESSER: codesserLogo,
+  PUCV: pucvLogo,
 };
 
 export const getStatusBadge = (estatus) => {

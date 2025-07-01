@@ -260,8 +260,10 @@ export default function EstadisticasPage() {
       setAcademicosData([]); // O mantener vacío si no tenemos un source para all academicos
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
-      setErrorLocal(err.message || "Error al cargar los datos del dashboard.");
-      setErrorGlobal(err.message || "Error al cargar los datos del dashboard.");
+      setErrorGlobal({
+        type: "error", // Forzar a tipo error si falló
+        title: "Error al cargar los datos del dashboard.",
+      });
     } finally {
       setLoading(false);
     }
@@ -458,7 +460,9 @@ export default function EstadisticasPage() {
 
     // Calcular academicosInvolucrados: Profesores únicos de `proyectosPorProfesorData`
     const academicosUnicosEnProyectos = new Set(
-      proyectosPorProfesorData.map((p) => p.profesor)
+      proyectosPorProfesorData.map(
+        (p) => `${p.NombreAcademico} ${p.ApellidoAcademico}`
+      )
     ).size;
 
     setIndicadoresPrincipales({

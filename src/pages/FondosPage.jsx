@@ -50,7 +50,7 @@ const FONDO_LOGOS = {
   ANID: anidLogo,
   CORFO: corfoLogo,
   GORE: goreLogo,
-  "Internas PUCV": internasPucvLogo,
+  Internas: internasPucvLogo,
   PRIVADA: privadaLogo,
 };
 
@@ -174,8 +174,11 @@ export default function FondosPage() {
       setFondosData(processedFondos);
     } catch (err) {
       console.error("Error fetching fondos data:", err);
-      setErrorLocal(err.message || "Error desconocido al cargar los fondos.");
-      setErrorGlobal(err.message || "Error al cargar los fondos.");
+       setErrorGlobal({
+        type: "error", // Forzar a tipo error si falló
+        title: "Error al cargar los fondos.",
+      });
+
     } finally {
       setLoading(false);
     }
@@ -221,7 +224,7 @@ export default function FondosPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Título principal */}
         <div className="mb-8">
@@ -362,7 +365,7 @@ export default function FondosPage() {
             {" "}
             {/* Fragment para envolver los dos divs siguientes (Headers y Lista) */}
             {/* Headers de columna */}
-            <div className="bg-white rounded-t-lg shadow-lg">
+            <div className="bg-white rounded-t-lg shadow-lg hidden md:block">
               <div className="grid grid-cols-6 gap-4 p-4 bg-gray-100 border-b border-gray-200 font-semibold text-gray-700 text-sm items-center">
                 <div className="text-center">Nombre del Fondo</div>{" "}
                 {/* Alineado a la izquierda */}
@@ -390,7 +393,8 @@ export default function FondosPage() {
                   >
                     <AccordionTrigger>
                       {/* Aquí puedes poner un solo <div> o incluso directamente los <span> y <div> de las columnas */}
-                      <div className="grid grid-cols-6 gap-4 w-full items-center py-2">
+                      {/* Versión escritorio */}
+                      <div className="hidden md:grid grid-cols-6 gap-4 w-full items-center py-2">
                         <div className="text-left flex items-center gap-2">
                           {renderTipoFondoLogo(fondo.tipo_nombre)}
                           <span className="font-medium text-gray-900">
@@ -425,6 +429,30 @@ export default function FondosPage() {
                           {" "}
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-bold ${getEstadoBadgeColor(fondo.estado_vigencia === "Vigente")}`}
+                          >
+                            {fondo.estado_vigencia}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Versión móvil (visible solo en móviles) */}
+                      <div className="block md:hidden w-full text-left space-y-1">
+                        <div className="font-semibold text-gray-900 flex items-center gap-2">
+                          {renderTipoFondoLogo(fondo.tipo_nombre)}
+                          {fondo.nombre}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Tipo:{" "}
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${getTipoFondoColor(fondo.tipo_nombre)}`}
+                          >
+                            {fondo.tipo_nombre}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Estado:{" "}
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${getEstadoBadgeColor(fondo.estado_vigencia === "Vigente")}`}
                           >
                             {fondo.estado_vigencia}
                           </span>
