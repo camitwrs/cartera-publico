@@ -333,24 +333,7 @@ export default function VisualizacionPage() {
                 />
               </div>
             </div>
-            <div>
-              <Select
-                value={selectedConvocatoria}
-                onValueChange={setSelectedConvocatoria}
-              >
-                <SelectTrigger className="bg-gray-50 border-gray-200">
-                  <SelectValue placeholder="Todas las convocatorias" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todas las convocatorias</SelectItem>
-                  {uniqueConvocatorias.map((conv) => (
-                    <SelectItem key={conv} value={conv}>
-                      {conv}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
             <div>
               <Select
                 value={selectedInstitucion}
@@ -485,7 +468,6 @@ export default function VisualizacionPage() {
           <div className="text-sm text-gray-500">
             Mostrando{" "}
             {/* Si sortedProjects está vacío, el endIndex podría ser negativo o 0 */}
-           
             {Math.min(sortedProjects.length, endIndex)} de{" "}
             {sortedProjects.length} proyectos
           </div>

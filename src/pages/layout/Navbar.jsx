@@ -6,6 +6,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
   BarChart3,
   Home,
   FileText, // Icono para Cartera de Proyectos (el menú)
@@ -14,6 +21,7 @@ import {
   BarChart,
   DollarSign,
   ClipboardList,
+  Menu,
   Plus, // Icono para Añadir Proyecto
   Edit, // Icono para Editar Proyectos
 } from "lucide-react";
@@ -38,120 +46,225 @@ export default function Navbar() {
     <header className="bg-[#2E5C8A] shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-8">
-            {/* Logo y Título de la Aplicación */}
-            <div
-              className="flex items-center space-x-2 group cursor-pointer"
-              onClick={() => handleNavItemClick("/")} // Ruta raíz para inicio
-            >
-              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-[#2E5C8A]" />
-              </div>
-              <div className="text-white font-bold text-lg">
-                Formulación de Proyectos I+D
-              </div>
+          {/* Logo y Título de la Aplicación */}
+          <div
+            className="flex items-center space-x-2 group cursor-pointer flex-shrink-0" /* Añadido flex-shrink-0 */
+            onClick={() => handleNavItemClick("/")}
+          >
+            <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-white rounded-lg flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg-h-6 text-[#2E5C8A]" />
             </div>
-
-            {/* Navegación Principal */}
-            <nav className="hidden md:flex space-x-6">
-              <Button
-                variant="ghost"
-                className={`text-white cursor-pointer hover:bg-white/10 hover:text-white ${
-                  isActive("/") ? "bg-white/10" : "" // Home es la ruta raíz
-                }`}
-                onClick={() => handleNavItemClick("/")}
-              >
-                <Home className="w-4 h-4 mr-2" />
-                Inicio
-              </Button>
-              <Button
-                variant="ghost"
-                className={`text-white cursor-pointer hover:bg-white/10 hover:text-white ${
-                  isActive("/visualizacion") ? "bg-white/10" : ""
-                }`}
-                onClick={() => handleNavItemClick("/visualizacion")}
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Visualización
-              </Button>
-
-              {/* Dropdown para "Cartera de proyectos" */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={`text-white cursor-pointer hover:bg-white/10 hover:text-white ${
-                      isActive(["/anadir-proyectos", "/editar-proyectos"]) // Active si una de las sub-rutas está activa
-                        ? "bg-white/10"
-                        : ""
-                    }`}
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Cartera de proyectos
-                    <ChevronDown className="w-4 h-4 ml-1 -mr-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-white shadow-lg rounded-md mt-2">
-                  <DropdownMenuItem
-                    className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
-                    onClick={() => handleNavItemClick("/anadir-proyectos")}
-                  >
-                    <Plus className="w-4 h-4 mr-2 text-gray-700" />
-                    Añadir Nuevo Proyecto
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
-                    onClick={() => handleNavItemClick("/editar-proyectos")}
-                  >
-                    <Edit className="w-4 h-4 mr-2 text-gray-700" />
-                    Modificar Cartera de Proyectos
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Dropdown para "Perfiles de proyecto" */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={`text-white cursor-pointer hover:bg-white/10 hover:text-white ${
-                      isActive(["/estadisticas", "/fondos", "/formularios"]) // Active si una de las sub-rutas está activa
-                        ? "bg-white/10"
-                        : ""
-                    }`}
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    Perfiles de proyecto
-                    <ChevronDown className="w-4 h-4 ml-1 -mr-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-white shadow-lg rounded-md mt-2">
-                  <DropdownMenuItem
-                    className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
-                    onClick={() => handleNavItemClick("/estadisticas")}
-                  >
-                    <BarChart className="w-4 h-4 mr-2 text-gray-700" />
-                    Estadísticas
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
-                    onClick={() => handleNavItemClick("/fondos")}
-                  >
-                    <DollarSign className="w-4 h-4 mr-2 text-gray-700" />
-                    Fondos
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
-                    onClick={() => handleNavItemClick("/formularios")}
-                  >
-                    <ClipboardList className="w-4 h-4 mr-2 text-gray-700" />
-                    Formularios
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </nav>
+            <div className="text-white font-bold text-lg hidden sm:block">
+              {" "}
+              {/* Ocultar el texto en extra small si no hay espacio */}
+              Formulación de Proyectos I+D
+            </div>
           </div>
-          {/* Aquí puedes añadir otros elementos del lado derecho del navbar si los hubiera */}
+
+          {/* Navegación Principal (oculta en móvil) */}
+          <nav className="hidden md:flex space-x-6">
+            <Button
+              variant="ghost"
+              className={`text-white cursor-pointer hover:bg-white/10 hover:text-white ${
+                isActive("/") ? "bg-white/10" : ""
+              }`}
+              onClick={() => handleNavItemClick("/")}
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Inicio
+            </Button>
+            <Button
+              variant="ghost"
+              className={`text-white cursor-pointer hover:bg-white/10 hover:text-white ${
+                isActive("/visualizacion") ? "bg-white/10" : ""
+              }`}
+              onClick={() => handleNavItemClick("/visualizacion")}
+            >
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Visualización
+            </Button>
+
+            {/* Dropdown para "Cartera de proyectos" */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={`text-white cursor-pointer hover:bg-white/10 hover:text-white ${
+                    isActive(["/anadir-proyectos", "/editar-proyectos"])
+                      ? "bg-white/10"
+                      : ""
+                  }`}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Cartera de proyectos
+                  <ChevronDown className="w-4 h-4 ml-1 -mr-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-white shadow-lg rounded-md mt-2">
+                <DropdownMenuItem
+                  className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
+                  onClick={() => handleNavItemClick("/anadir-proyectos")}
+                >
+                  <Plus className="w-4 h-4 mr-2 text-gray-700" />
+                  Añadir Nuevo Proyecto
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
+                  onClick={() => handleNavItemClick("/editar-proyectos")}
+                >
+                  <Edit className="w-4 h-4 mr-2 text-gray-700" />
+                  Modificar Cartera de Proyectos
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Dropdown para "Perfiles de proyecto" */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={`text-white cursor-pointer hover:bg-white/10 hover:text-white ${
+                    isActive(["/estadisticas", "/fondos", "/formularios"])
+                      ? "bg-white/10"
+                      : ""
+                  }`}
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Perfiles de proyecto
+                  <ChevronDown className="w-4 h-4 ml-1 -mr-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-white shadow-lg rounded-md mt-2">
+                <DropdownMenuItem
+                  className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
+                  onClick={() => handleNavItemClick("/estadisticas")}
+                >
+                  <BarChart className="w-4 h-4 mr-2 text-gray-700" />
+                  Estadísticas
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
+                  onClick={() => handleNavItemClick("/fondos")}
+                >
+                  <DollarSign className="w-4 h-4 mr-2 text-gray-700" />
+                  Fondos
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer hover:bg-gray-100 p-2 rounded-md"
+                  onClick={() => handleNavItemClick("/formularios")}
+                >
+                  <ClipboardList className="w-4 h-4 mr-2 text-gray-700" />
+                  Formularios
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </nav>
+
+          {/* Menú Hamburguesa para móvil */}
+          <div className="md:hidden">
+            {" "}
+            {/* Solo visible en móvil */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="text-white hover:bg-white/10"
+                >
+                  <Menu className="h-6 w-6" />
+                  <span className="sr-only">Toggle navigation menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[250px] sm:w-[300px]">
+                {" "}
+                {/* Menú lateral que sale de la izquierda */}
+                <SheetHeader>
+                  <SheetTitle className="text-xl font-bold">Menú</SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-4 mt-8">
+                  <Button
+                    variant="ghost"
+                    className={`text-gray-700 justify-start ${isActive("/") ? "bg-gray-100" : ""}`}
+                    onClick={() => {
+                      handleNavItemClick("/");
+                    }}
+                  >
+                    <Home className="w-4 h-4 mr-2" />
+                    Inicio
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className={`text-gray-700 justify-start ${isActive("/visualizacion") ? "bg-gray-100" : ""}`}
+                    onClick={() => {
+                      handleNavItemClick("/visualizacion");
+                    }}
+                  >
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Visualización
+                  </Button>
+
+                  {/* Elementos del Dropdown "Cartera de proyectos" como botones directos en móvil */}
+                  <h4 className="px-4 py-2 text-sm font-semibold text-gray-500">
+                    Cartera de proyectos
+                  </h4>
+                  <Button
+                    variant="ghost"
+                    className={`text-gray-700 justify-start pl-8 ${isActive("/anadir-proyectos") ? "bg-gray-100" : ""}`}
+                    onClick={() => {
+                      handleNavItemClick("/anadir-proyectos");
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Añadir Nuevo Proyecto
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className={`text-gray-700 justify-start pl-8 ${isActive("/editar-proyectos") ? "bg-gray-100" : ""}`}
+                    onClick={() => {
+                      handleNavItemClick("/editar-proyectos");
+                    }}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Modificar Cartera de Proyectos
+                  </Button>
+
+                  {/* Elementos del Dropdown "Perfiles de proyecto" como botones directos en móvil */}
+                  <h4 className="px-4 py-2 text-sm font-semibold text-gray-500">
+                    Perfiles de proyecto
+                  </h4>
+                  <Button
+                    variant="ghost"
+                    className={`text-gray-700 justify-start pl-8 ${isActive("/estadisticas") ? "bg-gray-100" : ""}`}
+                    onClick={() => {
+                      handleNavItemClick("/estadisticas");
+                    }}
+                  >
+                    <BarChart className="w-4 h-4 mr-2" />
+                    Estadísticas
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className={`text-gray-700 justify-start pl-8 ${isActive("/fondos") ? "bg-gray-100" : ""}`}
+                    onClick={() => {
+                      handleNavItemClick("/fondos");
+                    }}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    Fondos
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className={`text-gray-700 justify-start pl-8 ${isActive("/formularios") ? "bg-gray-100" : ""}`}
+                    onClick={() => {
+                      handleNavItemClick("/formularios");
+                    }}
+                  >
+                    <ClipboardList className="w-4 h-4 mr-2" />
+                    Formularios
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </div>
     </header>
