@@ -48,11 +48,17 @@ export default function Footer() {
           />
         </div>
 
-        {/* Texto de derechos de autor (si va al final, como en el diseño original de la landing) */}
-        {/* <p className="text-blue-100 text-sm mt-8">
-          © {new Date().getFullYear()} Formulación de Proyectos I+D, Facultad
-          de Ingeniería PUCV.
-        </p> */}
+        <div className="flex flex-col items-center">
+          <p className="text-blue-100 text-sm mt-2">
+           Av. Brasil N° 2147, Valparaíso, Chile | +56 2273601 | decanato.ingenieria@pucv.cl
+          </p>
+
+          
+
+          <p className="text-blue-100 text-sm mt-4">
+            © {new Date().getFullYear()} K2i Knowledge to Industry Group.
+          </p>
+        </div>
       </div>
     </footer>
   );

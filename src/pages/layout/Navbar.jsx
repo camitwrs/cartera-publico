@@ -47,11 +47,10 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           {/* Logo y Título de la Aplicación */}
           <div
-            className="flex items-center space-x-2 group cursor-pointer flex-shrink-0" /* Añadido flex-shrink-0 */
+            className="flex items-center space-x-2 gap-2 group cursor-pointer flex-shrink-0" /* Añadido flex-shrink-0 */
             onClick={() => handleNavItemClick("/")}
           >
-            <img src="/k2i-logo.png" alt="Grupo k2i" className="h-10 w-auto" />
-            <div className="text-white font-bold text-lg hidden sm:block">
+            <div className="text-white font-bold text-xl hidden sm:block">
               Formulación de Proyectos I+D
             </div>
           </div>
