@@ -20,6 +20,7 @@ import {
   FolderOpen,
   FolderCheck,
   FileDown,
+  Copy,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
@@ -31,6 +32,9 @@ import { useExportData } from "@/hooks/useExportDataCartera";
 import pdfIcon from "../assets/icons/file-pdf-regular.svg";
 import excelIcon from "../assets/icons/excel2-svgrepo-com.svg";
 
+const FORMULARIO_PERFIL_URL =
+  "https://formularioproyectos-production.up.railway.app/";
+
 export default function HomePage() {
   const { proyectosContexto, setProyectosContexto } = useProyectos();
 
@@ -39,6 +43,8 @@ export default function HomePage() {
   const [proyectosProfesorData, setProyectosProfesorData] = useState([]);
   const [loadingQuickStats, setLoadingQuickStats] = useState(true);
   const { setError } = useError();
+
+  const [copiedMessage, setCopiedMessage] = useState(false);
 
   const { loadingExportPDF, loadingExportExcel, generarPDF, generarExcel } =
     useExportData();
@@ -100,6 +106,29 @@ export default function HomePage() {
   useEffect(() => {
     console.log("proyectosContexto actualizado:", proyectosContexto);
   }, [proyectosContexto]);
+
+  const handleCopyLinkFormulario = async () => {
+    try {
+      await navigator.clipboard.writeText(FORMULARIO_PERFIL_URL);
+      setCopiedMessage(true); // Activa el mensaje de copiado
+      setError({
+        type: "success",
+        title: "Enlace copiado!",
+        description: "El enlace al formulario ha sido copiado al portapapeles.",
+      });
+      setTimeout(() => {
+        setCopiedMessage(false); // Oculta el mensaje después de un tiempo
+        setError(null); // Limpia el error global si lo usaste solo para esto
+      }, 3000); // Mensaje visible por 3 segundos
+    } catch (err) {
+      console.error("Error al copiar el enlace:", err);
+      setError({
+        type: "error",
+        title: "Error al Copiar",
+        description: "No se pudo copiar el enlace al portapapeles.",
+      });
+    }
+  };
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
@@ -238,8 +267,8 @@ export default function HomePage() {
           <div className="lg:col-span-2 space-y-6 h-full">
             {/* Quick Actions */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 ">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                Acciones Rápidas
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                ¿Qué quieres hacer hoy?
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -315,6 +344,41 @@ export default function HomePage() {
                     </div>
                   </div>
                   <ArrowRight className="w-5 h-5 ml-auto group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 ">
+              <h2 className="text-lg font-semibold text-gray-900 mb-6">
+                ¿Quieres ir a otro lado?
+              </h2>
+              {/* NUEVO BOTÓN PARA EL FORMULARIO DE PERFIL DE PROYECTO */}
+              <div className="relative">
+                <Button
+                  variant="outline"
+                  className="h-20 bg-gradient-to-r text-gray-800 justify-start p-6 group transition-transform hover:scale-[1.02] cursor-pointer w-full"
+                  size="lg"
+                  onClick={() => window.open(FORMULARIO_PERFIL_URL, "_blank")} // Abre en nueva pestaña
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-lg flex items-center justify-center transition-colors">
+                      <FileDown className="w-12 h-12" />{" "}
+                    </div>
+                    <div className="text-left">
+                      <div className="font-semibold text-lg">
+                        Formulario Perfil de Proyecto
+                      </div>
+                      <div className="text-s">Completa un nuevo perfil</div>
+                    </div>
+                  </div>
+                </Button>
+                <Button
+                  variant="secondary" // Puedes usar "ghost" o "link" si prefieres algo menos intrusivo
+                  className="absolute inset-y-0 right-0 h-full w-[60px] flex items-center justify-center rounded-l-none rounded-r-xl bg-gray-400 hover:bg-gray-500 text-white transition-colors p-0"
+                  onClick={handleCopyLinkFormulario}
+                  title="Copiar enlace del formulario"
+                >
+                  <Copy className="h-5 w-5" />
                 </Button>
               </div>
             </div>
