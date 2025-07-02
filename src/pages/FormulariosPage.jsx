@@ -289,10 +289,10 @@ export default function FormulariosPage() {
               >
                 Reiniciar filtros
               </Button>
-              <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2">
+              {/*<Button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2">
                 <Download className="h-4 w-4" />
                 <span>Generar PDF</span>
-              </button>
+              </Button>*/}
             </div>
           </div>
         </div>
