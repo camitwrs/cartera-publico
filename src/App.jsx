@@ -21,6 +21,7 @@ import EditarProyectosPage from "./pages/EditarProyectosPage";
 // **** Importa tus Providers de contexto ****
 import { LoadingProvider } from "./contexts/LoadingContext";
 import { ErrorProvider } from "./contexts/ErrorContext";
+import { ProyectosProvider } from "./contexts/ProyectosContext";
 
 // --- Componente principal de la aplicación
 function AppContent() {
@@ -124,10 +125,10 @@ export default function App() {
   return (
     <Router>
       <ErrorProvider>
-        {" "}
-        {/* Envuelve con ErrorProvider primero para que errores de LoadingProvider se muestren */}
         <LoadingProvider>
-          <AppContent />
+          <ProyectosProvider>
+            <AppContent />
+          </ProyectosProvider>
         </LoadingProvider>
       </ErrorProvider>
     </Router>

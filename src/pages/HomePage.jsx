@@ -5,6 +5,8 @@ import FondosActivosSection from "../pages/components/FondosActivosSection"; // 
 import estadisticasService from "../api/estadisticas.js";
 import { useState, useEffect } from "react";
 
+import { useProyectos } from "@/contexts/ProyectosContext";
+
 // **** Importa tu componente Spinner específico para esta página ****
 import { Spinner } from "@/components/ui/spinner";
 
@@ -23,13 +25,15 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { useError } from "@/contexts/ErrorContext";
-import { useExportData } from "@/hooks/useExportData";
+import { useExportData } from "@/hooks/useExportDataCartera";
 
 // Importa los iconos de los archivos si los vas a seguir usando así
 import pdfIcon from "../assets/icons/file-pdf-regular.svg";
 import excelIcon from "../assets/icons/excel2-svgrepo-com.svg";
 
 export default function HomePage() {
+  const { proyectosContexto, setProyectosContexto } = useProyectos();
+
   const navigate = useNavigate();
   const [proyectosCrudosData, setProyectosCrudosData] = useState([]);
   const [proyectosProfesorData, setProyectosProfesorData] = useState([]);
@@ -53,11 +57,27 @@ export default function HomePage() {
     setLoadingQuickStats(true);
     setError(null);
     try {
-      const projectsResponse =
-        await funcionesService.getDataInterseccionProyectos();
-      const profProjectsResponse =
-        await estadisticasService.getAcademicosPorUnidad();
-      console.log("projectsResponse:", projectsResponse);
+      const [projectsResponse, academicosResponse, profProjectsResponse] =
+        await Promise.all([
+          funcionesService.getDataInterseccionProyectos(),
+          funcionesService.getAcademicosPorProyecto(),
+          estadisticasService.getAcademicosPorUnidad(),
+        ]);
+
+      const projects = Array.isArray(projectsResponse) ? projectsResponse : [];
+      const academicosPorProyecto = Array.isArray(academicosResponse)
+        ? academicosResponse
+        : [];
+
+      const newAcademicosMap = academicosPorProyecto.reduce((map, item) => {
+        map[item.id_proyecto] = item;
+        return map;
+      }, {});
+      const projectsWithAcademicos = projects.map((project) => ({
+        ...project,
+        academicos: newAcademicosMap[project.id_proyecto]?.profesores || [],
+      }));
+      setProyectosContexto(projectsWithAcademicos);
 
       setProyectosCrudosData(
         Array.isArray(projectsResponse) ? projectsResponse : []
@@ -76,6 +96,10 @@ export default function HomePage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    console.log("proyectosContexto actualizado:", proyectosContexto);
+  }, [proyectosContexto]);
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">

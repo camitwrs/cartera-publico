@@ -204,9 +204,6 @@ export default function VisualizacionPage() {
       setAcademicosMap(newAcademicosMap);
 
       setProjectsData(projects);
-
-      console.log("Proyectos obtenidos:", projects);
-      console.log("Mapa de Académicos por Proyecto:", newAcademicosMap);
     } catch (err) {
       console.error("Error fetching data for VisualizacionPage:", err);
       setErrorLocal(
