@@ -8,7 +8,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Edit, Trash2, X, Check, Search, RotateCcw } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  X,
+  Check,
+  Search,
+  RotateCcw,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   flexRender,
@@ -1090,11 +1100,13 @@ export default function EditarProyectosPage() {
                               header.column.columnDef.header,
                               header.getContext()
                             )}
-                            {header.column.getIsSorted() === "asc"
-                              ? " ⬆️"
-                              : header.column.getIsSorted() === "desc"
-                                ? " ⬇️"
-                                : ""}
+                            {header.column.getIsSorted() === "asc" ? (
+                              <ArrowUp className="ml-1 h-4 w-4 inline-block" />
+                            ) : header.column.getIsSorted() === "desc" ? (
+                              <ArrowDown className="ml-1 h-4 w-4 inline-block" />
+                            ) : (
+                              ""
+                            )}
                           </div>
                         )}
                         {header.column.getCanResize() && (
