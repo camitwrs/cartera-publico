@@ -74,7 +74,14 @@ const FONDO_LOGOS = {
   GORE: goreLogo,
   Internas: internasPucvLogo,
   PRIVADA: privadaLogo,
-  "Internas PUCV": internasPucvLogo,
+};
+
+const FONDO_URLS = {
+  ANID: "https://anid.cl/",
+  CORFO: "https://www.corfo.cl",
+  GORE: "https://www.gobiernovalparaiso.cl/",
+  Internas: "https://www.pucv.cl/",
+  PRIVADA: "",
 };
 
 export default function FondosPage() {
@@ -554,6 +561,7 @@ export default function FondosPage() {
                     <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1fr_auto] items-center py-2 px-6 gap-4 group hover:bg-gray-50 transition-colors">
                       <AccordionTrigger className="flex items-center gap-2 text-left">
                         {renderTipoFondoLogo(fondo.tipo_nombre)}
+
                         <span className="font-medium text-gray-900 line-clamp-1">
                           {fondo.nombre}
                         </span>
@@ -564,6 +572,17 @@ export default function FondosPage() {
                         >
                           {fondo.tipo_nombre}
                         </span>
+                        {FONDO_URLS[fondo.tipo_nombre] && (
+                          <a
+                            href={FONDO_URLS[fondo.tipo_nombre]}
+                            target="_blank" // Abrir en nueva pestaña
+                            rel="noopener noreferrer" // Seguridad
+                            className="text-blue-600 font-semibold mt-2 hover:underline text-xs line-clamp-1"
+                            onClick={(e) => e.stopPropagation()} // Evita que el clic en el enlace expanda el acordeón
+                          >
+                            {FONDO_URLS[fondo.tipo_nombre]}
+                          </a>
+                        )}
                       </div>
                       <div className="text-center">
                         <span
