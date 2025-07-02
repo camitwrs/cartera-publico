@@ -85,6 +85,7 @@ const EditableCell = ({
   const onBlur = () => {
     setIsEditing(false);
     // Llamar a la función de actualización pasada por meta
+    // `value` aquí SIEMPRE es el monto completo, no el dividido por millón
     table.options.meta?.updateData(row.original.id_proyecto, column.id, value);
   };
 
@@ -118,7 +119,14 @@ const EditableCell = ({
     }
 
     if (column.id === "monto") {
-      return formatCLP(initialValue);
+      // Para la VISUALIZACIÓN, dividir por 1,000,000
+      const montoEnMillones = Number(initialValue) / 1_000_000;
+      // Formatear como número, puedes ajustar los decimales si es necesario
+      if (isNaN(montoEnMillones)) return "-";
+      return `$${montoEnMillones.toLocaleString("es-CL", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 1, // Puedes ajustar los decimales aquí
+      })} `;
     }
 
     if (column.id === "fecha_postulacion" && initialValue) {
@@ -183,7 +191,7 @@ const EditableCell = ({
         return (
           <Input
             type="number"
-            value={value}
+            value={value} // Aquí se muestra el valor COMPLETO para la edición
             onChange={(e) => setValue(e.target.value)}
             onBlur={onBlur}
             onKeyDown={handleKeyDown}
@@ -233,7 +241,10 @@ const EditableCell = ({
             </span>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs text-sm">
-            {formattedDisplayValue}
+            {/* El tooltip siempre muestra el valor COMPLETO */}
+            {column.id === "monto"
+              ? formatCLP(initialValue)
+              : formattedDisplayValue}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -564,6 +575,28 @@ export default function EditarProyectosPage() {
       />
     );
 
+  // Custom filter function para rangos de monto
+  const filterMontoRange = useCallback((row, columnId, filterValues) => {
+    // filterValues es un array [min, max] o null/undefined
+    const [min, max] = filterValues || [null, null];
+    const monto = Number(row.getValue(columnId)); // Obtener el monto de la fila
+
+    if (isNaN(monto)) return false; // Si el monto no es un número, no pasa el filtro
+
+    // Si no hay min ni max, pasa el filtro
+    if (min === null && max === null) {
+      return true;
+    }
+
+    // Si hay min, verificar que el monto sea mayor o igual
+    const passesMin = min !== null ? monto >= min : true;
+
+    // Si hay max, verificar que el monto sea menor o igual
+    const passesMax = max !== null ? monto <= max : true;
+
+    return passesMin && passesMax;
+  }, []);
+
   // --- Definición de Columnas para TanStack Table ---
   const columns = useMemo(
     () => [
@@ -684,6 +717,10 @@ export default function EditarProyectosPage() {
           "max-w-[130px]"
         ),
         size: 150,
+        filterFn: (row, columnId, filterValue) => {
+          // Asumo que 'id' en tipoConvocatoriaData es el ID numérico
+          return row.getValue(columnId) === filterValue;
+        },
       },
       {
         accessorKey: "inst_conv",
@@ -695,6 +732,10 @@ export default function EditarProyectosPage() {
           "max-w-[180px]"
         ),
         size: 200,
+        filterFn: (row, columnId, filterValue) => {
+          // Asumo que 'id' en institucionesData es el ID numérico
+          return row.getValue(columnId) === filterValue;
+        },
       },
       {
         accessorKey: "detalle_apoyo",
@@ -712,6 +753,10 @@ export default function EditarProyectosPage() {
           "max-w-[100px]"
         ),
         size: 120,
+        filterFn: (row, columnId, filterValue) => {
+          // Asumo que 'id_apoyo' en apoyosData es el ID numérico
+          return row.getValue(columnId) === filterValue;
+        },
       },
       {
         accessorKey: "academicos",
@@ -727,6 +772,7 @@ export default function EditarProyectosPage() {
       tiposConvocatoriaData,
       institucionesData,
       apoyosData,
+      filterMontoRange, // Asegúrate de añadir filterMontoRange como dependencia
     ] // Dependencias para memo
   );
 
@@ -744,7 +790,17 @@ export default function EditarProyectosPage() {
       pagination,
     },
     onGlobalFilterChange: setGlobalFilter,
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: (newFiltersOrUpdater) => {
+      setColumnFilters((oldFilters) => {
+        const newFilters =
+          typeof newFiltersOrUpdater === "function"
+            ? newFiltersOrUpdater(oldFilters)
+            : newFiltersOrUpdater;
+
+        // console.log("Column Filters ACTUALIZADO por TanStack Table:", newFilters); // Descomentar para depurar
+        return newFilters;
+      });
+    },
 
     onPaginationChange: setPagination,
     enableColumnResizing: true,
@@ -793,15 +849,196 @@ export default function EditarProyectosPage() {
           </div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
-          {/* Sección de Filtros */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-            <div className="md:col-span-2">
+          {/* Sección de Filtros PRINCIPAL */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+            {/* Filtro por Unidad */}
+            <div className="col-span-1">
+              <Select
+                value={
+                  table.getColumn("unidad")?.getFilterValue()?.toString() ||
+                  "all"
+                }
+                onValueChange={(value) => {
+                  const filterValue =
+                    value === "all" ? undefined : Number(value);
+                  table.getColumn("unidad")?.setFilterValue(filterValue);
+                }}
+              >
+                <SelectTrigger className="w-full cursor-pointer">
+                  <SelectValue placeholder="Filtrar por Unidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las Unidades</SelectItem>
+                  {unidadesData.map((u) => (
+                    <SelectItem key={u.id_unidad} value={String(u.id_unidad)}>
+                      {u.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro por Temática */}
+            <div className="col-span-1">
+              <Select
+                value={
+                  table
+                    .getColumn("id_tematica")
+                    ?.getFilterValue()
+                    ?.toString() || "all"
+                }
+                onValueChange={(value) => {
+                  const filterValue =
+                    value === "all" ? undefined : Number(value);
+                  table.getColumn("id_tematica")?.setFilterValue(filterValue);
+                }}
+              >
+                <SelectTrigger className="w-full cursor-pointer">
+                  <SelectValue placeholder="Filtrar por Temática" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key="all" value="all">
+                    Todas las Temáticas
+                  </SelectItem>
+                  {tematicasData.map((t) => (
+                    <SelectItem
+                      key={t.id_tematica}
+                      value={String(t.id_tematica)}
+                    >
+                      {t.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro por Estatus */}
+            <div className="col-span-1">
+              <Select
+                value={
+                  table.getColumn("id_estatus")?.getFilterValue()?.toString() ||
+                  "all"
+                }
+                onValueChange={(value) => {
+                  const filterValue =
+                    value === "all" ? undefined : Number(value);
+                  table.getColumn("id_estatus")?.setFilterValue(filterValue);
+                }}
+              >
+                <SelectTrigger className="w-full cursor-pointer">
+                  <SelectValue placeholder="Filtrar por Estatus" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key="all" value="all">
+                    Todos los Estatus
+                  </SelectItem>
+                  {estatusData.map((e) => (
+                    <SelectItem key={e.id_estatus} value={String(e.id_estatus)}>
+                      {e.tipo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro por Tipo Convocatoria */}
+            <div className="col-span-1">
+              <Select
+                value={
+                  table
+                    .getColumn("tipo_convocatoria")
+                    ?.getFilterValue()
+                    ?.toString() || "all"
+                }
+                onValueChange={(value) => {
+                  const filterValue =
+                    value === "all" ? undefined : Number(value);
+                  table
+                    .getColumn("tipo_convocatoria")
+                    ?.setFilterValue(filterValue);
+                }}
+              >
+                <SelectTrigger className="w-full cursor-pointer">
+                  <SelectValue placeholder="Filtrar por Tipo Convocatoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    Todos los Tipos de Convocatoria
+                  </SelectItem>
+                  {tiposConvocatoriaData.map((tc) => (
+                    <SelectItem key={tc.id} value={String(tc.id)}>
+                      {tc.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro por Institución Convocatoria */}
+            <div className="col-span-1">
+              <Select
+                value={
+                  table.getColumn("inst_conv")?.getFilterValue()?.toString() ||
+                  "all"
+                }
+                onValueChange={(value) => {
+                  const filterValue =
+                    value === "all" ? undefined : Number(value);
+                  table.getColumn("inst_conv")?.setFilterValue(filterValue);
+                }}
+              >
+                <SelectTrigger className="w-full cursor-pointerl">
+                  <SelectValue placeholder="Filtrar por Institución" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las Instituciones</SelectItem>
+                  {institucionesData.map((i) => (
+                    <SelectItem key={i.id} value={String(i.id)}>
+                      {i.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Filtro por Tipo Apoyo */}
+            <div className="col-span-1">
+              <Select
+                value={
+                  table.getColumn("apoyo")?.getFilterValue()?.toString() ||
+                  "all"
+                }
+                onValueChange={(value) => {
+                  const filterValue =
+                    value === "all" ? undefined : Number(value);
+                  table.getColumn("apoyo")?.setFilterValue(filterValue);
+                }}
+              >
+                <SelectTrigger className="w-full cursor-pointer">
+                  <SelectValue placeholder="Filtrar por Tipo Apoyo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los Tipos de Apoyo</SelectItem>
+                  {apoyosData.map((a) => (
+                    <SelectItem key={a.id_apoyo} value={String(a.id_apoyo)}>
+                      {a.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Sección de Búsqueda y Rango de Montos */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6 items-end">
+            {/* Búsqueda Global */}
+            <div className="col-span-full xl:col-span-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   type="text"
                   placeholder="Buscar por Nombre de Proyecto..."
-                  className="pl-10"
+                  className="pl-10 w-full"
                   value={globalFilter ?? ""}
                   onChange={(e) =>
                     table.setGlobalFilter(String(e.target.value))
@@ -809,98 +1046,18 @@ export default function EditarProyectosPage() {
                 />
               </div>
             </div>
-            {/* Filtros para columnas específicas */}
-            <Select
-              value={
-                table.getColumn("unidad")?.getFilterValue()?.toString() || "all"
-              }
-              onValueChange={(value) => {
-                const filterValue = value === "all" ? undefined : Number(value);
 
-                const column = table.getColumn("unidad");
-
-                if (column) {
-                  column.setFilterValue(filterValue);
-                } else {
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por Unidad" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las Unidades</SelectItem>
-                {unidadesData.map((u) => (
-                  <SelectItem key={u.id_unidad} value={String(u.id_unidad)}>
-                    {u.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={
-                table.getColumn("id_tematica")?.getFilterValue()?.toString() ||
-                "all"
-              }
-              onValueChange={(value) =>
-                table
-                  .getColumn("id_tematica")
-                  ?.setFilterValue(value === "all" ? undefined : Number(value))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por Temática" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem key="all" value="all">
-                  Todas las Temáticas
-                </SelectItem>
-                {tematicasData.map((t) => (
-                  <SelectItem key={t.id_tematica} value={String(t.id_tematica)}>
-                    {t.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={
-                // ¡AQUÍ ESTÁ EL CAMBIO! Ahora es 'id_estatus'
-                table.getColumn("id_estatus")?.getFilterValue()?.toString() ||
-                "all"
-              }
-              onValueChange={(value) => {
-                const filterValue = value === "all" ? undefined : Number(value);
-
-                table.getColumn("id_estatus")?.setFilterValue(filterValue);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filtrar por Estatus" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem key="all" value="all">
-                  Todos los Estatus
-                </SelectItem>
-                {estatusData.map((e) => (
-                  <SelectItem key={e.id_estatus} value={String(e.id_estatus)}>
-                    {e.tipo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {/* Filtro de fecha - Puedes añadirlo como un filtro de columna si lo necesitas */}
-            {/* <Input type="date" placeholder="Filtrar por Fecha de Postulación" /> */}
-            <div className="md:col-span-1 md:ml-auto">
+            {/* Botón Restablecer Filtros */}
+            <div className="col-span-full sm:col-span-2 lg:col-span-1 flex ">
               <Button
                 variant="outline"
-                className="w-full bg-gray-200 hover:bg-gray-300"
+                className=" bg-gray-200 cursor-pointer hover:bg-gray-300"
                 onClick={() => {
-                  // Restablecer el filtro global y todos los filtros de columna
                   setGlobalFilter("");
-                  setColumnFilters([]); // Esto limpia todos los filtros de columna
+                  setColumnFilters([]);
                 }}
               >
-                <RotateCcw className="w-4 h-4" /> Restablecer Filtros
+                <RotateCcw className="w-4 h-4 mr-2" /> Limpiar Filtros
               </Button>
             </div>
           </div>

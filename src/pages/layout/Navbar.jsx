@@ -50,12 +50,8 @@ export default function Navbar() {
             className="flex items-center space-x-2 group cursor-pointer flex-shrink-0" /* Añadido flex-shrink-0 */
             onClick={() => handleNavItemClick("/")}
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-white rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg-h-6 text-[#2E5C8A]" />
-            </div>
+            <img src="/k2i-logo.png" alt="Grupo k2i" className="h-10 w-auto" />
             <div className="text-white font-bold text-lg hidden sm:block">
-              {" "}
-              {/* Ocultar el texto en extra small si no hay espacio */}
               Formulación de Proyectos I+D
             </div>
           </div>
