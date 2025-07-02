@@ -185,13 +185,12 @@ export default function EstadisticasPage() {
             {firstLine}
           </Text>
           <Text
-            x={x}
+            x={x }
             y={y + 6}
             fill="#000"
             textAnchor={textAnchor}
             dominantBaseline="central"
             fontSize={12}
-            fontWeight="bold"
           >
             {secondLine ? `${secondLine}: ${value}` : `${value}`}
           </Text>

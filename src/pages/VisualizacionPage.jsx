@@ -521,20 +521,20 @@ export default function VisualizacionPage() {
       {selectedProject && ( // Solo renderiza si hay un proyecto seleccionado
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           {/* DialogTrigger no es necesario aquí porque abrimos el modal programáticamente */}
-          <DialogContent className="sm:max-w-[800px] md:max-w-[900px] lg:max-w-[1100px] h-auto max-h-[90vh] overflow-y-auto ">
+          <DialogContent className="w-full max-w-[95vw] md:max-w-[900px] h-[95vh] overflow-y-auto rounded-lg p-0">
             {" "}
             {/* Ajusta el ancho y altura máximos */}
             <DialogHeader>
               {/* Parte superior del modal */}
-              <div className="bg-gradient-to-r from-[#275078] to-[#5296de] p-6 rounded-t-lg">
+              <div className="bg-gradient-to-r from-[#275078] to-[#5296de] p-4 md:p-6 rounded-t-lg">
                 {" "}
                 {/* P-6 para más padding, rounded-t-lg para bordes superiores */}
-                <DialogTitle className="text-2xl font-bold text-white mb-2 leading-tight">
+                <DialogTitle className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight">
                   {" "}
                   {/* Título del modal */}
                   {selectedProject.nombre}
                 </DialogTitle>
-                <div className="flex justify-between items-center text-sm text-white">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center text-sm text-white gap-1">
                   <p>
                     <span className="font-semibold">Unidad responsable:</span>{" "}
                     {selectedProject.unidad || "Sin información"}
@@ -544,7 +544,7 @@ export default function VisualizacionPage() {
                 </div>
               </div>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 md:gap-6 p-4 md:p-6">
               {/* Columna Izquierda: Detalles e Información de Postulación */}
               <div className="flex flex-col gap-6">
                 {/* Detalles del Proyecto */}

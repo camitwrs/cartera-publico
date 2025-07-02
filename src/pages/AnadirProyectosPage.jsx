@@ -255,13 +255,15 @@ export default function AnadirProyectosPage() {
         academicos: academicosParaPost, // Array de objetos {id, jefe}
       };
 
-      //const response = await proyectosService.crearProyecto(projectToSave);
+      const response = await proyectosService.crearProyecto(projectToSave);
 
-      //console.log("Proyecto guardado exitosamente:", response);
-      setErrorGlobal({
-        type: "success",
-        title: "Proyecto guardado exitosamente!",
-      });
+      setTimeout(() => {
+        setErrorGlobal({
+          type: "success",
+          title: "Proyecto guardado exitosamente!",
+        });
+        navigate("/editar-proyectos"); // Redirige a la página principal
+      }, 3000); // 3000 milisegundos = 3 segundos
     } catch (err) {
       console.error("Error guardando proyecto:", err);
       setErrorLookups(
