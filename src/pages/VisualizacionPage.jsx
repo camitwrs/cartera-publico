@@ -520,73 +520,65 @@ export default function VisualizacionPage() {
       {/* **** MODAL DE DETALLES DEL PROYECTO **** */}
       {selectedProject && ( // Solo renderiza si hay un proyecto seleccionado
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          {/* DialogTrigger no es necesario aquí porque abrimos el modal programáticamente */}
-          <DialogContent className="w-full max-w-[95vw] md:max-w-[900px] h-[95vh] overflow-y-auto rounded-lg p-0">
-            {" "}
-            {/* Ajusta el ancho y altura máximos */}
+          <DialogContent
+            className="w-full max-w-md md:max-w-4xl rounded-lg p-0"
+            style={{
+              maxHeight: "auto",
+              minHeight: "auto",
+              overflowY: "auto",
+              marginBottom: "2rem",
+            }}
+          >
             <DialogHeader>
-              {/* Parte superior del modal */}
-              <div className="bg-gradient-to-r from-[#275078] to-[#5296de] p-4 md:p-6 rounded-t-lg">
-                {" "}
-                {/* P-6 para más padding, rounded-t-lg para bordes superiores */}
-                <DialogTitle className="text-xl md:text-2xl font-bold text-white mb-2 leading-tight">
-                  {" "}
-                  {/* Título del modal */}
+              <div className="bg-gradient-to-r from-[#275078] to-[#5296de] px-6 py-4 rounded-t-lg">
+                <DialogTitle className="text-lg md:text-xl font-bold text-white mb-1 leading-tight">
                   {selectedProject.nombre}
                 </DialogTitle>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center text-sm text-white gap-1">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center text-s md:text-sm text-white gap-1">
                   <p>
                     <span className="font-semibold">Unidad responsable:</span>{" "}
                     {selectedProject.unidad || "Sin información"}
                   </p>
-                  {getStatusBadge(selectedProject.estatus || "Sin información")}{" "}
-                  {/* Badge de estatus */}
+                  {getStatusBadge(selectedProject.estatus || "Sin información")}
                 </div>
               </div>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 md:gap-6 p-4 md:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-3 md:gap-4 p-6 md:p-4">
               {/* Columna Izquierda: Detalles e Información de Postulación */}
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
                 {/* Detalles del Proyecto */}
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <ClipboardList className="h-5 w-5 text-[#2E5C8A]" />{" "}
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4 text-[#2E5C8A]" />
                     Detalles del Proyecto
                   </h4>
-                  <div className="flex items-center justify-normal text-sm text-gray-700 mb-1">
-                    {" "}
-                    {/* Usamos justify-between aquí */}
+                  <div className="flex items-center text-s text-gray-700 mb-1">
                     <span className="font-semibold flex-shrink-0 mr-2">
                       Temática:
-                    </span>{" "}
-                    {/* flex-shrink-0 para que el label no se encoja */}
+                    </span>
                     {getThematicBadge(
                       selectedProject.tematica || "Sin información"
-                    )}{" "}
+                    )}
                   </div>
-                  <div className="flex items-center justify-normal text-sm text-gray-700 mb-1">
-                    {" "}
-                    {/* Usamos justify-between aquí */}
-                    <span className="font-semibold flex-shrink-0 mr-4">
+                  <div className="flex items-center text-s text-gray-700 mb-1">
+                    <span className="font-semibold flex-shrink-0 mr-2">
                       Institución:
-                    </span>{" "}
-                    {/* flex-shrink-0 para el label */}
+                    </span>
                     <div className="flex items-center gap-2">
-                      {" "}
                       <span>
                         {selectedProject.institucion || "Sin información"}
                       </span>
                       {renderInstitucionLogo(selectedProject.institucion || "")}
                     </div>
                   </div>
-                  <p className="text-sm text-gray-700 mb-1">
+                  <p className="text-s text-gray-700 mb-1">
                     <span className="font-semibold">Monto solicitado:</span>{" "}
                     {selectedProject.monto !== null &&
                     selectedProject.monto !== undefined
                       ? `$${selectedProject.monto.toLocaleString("es-CL")}`
                       : "Sin información"}
                   </p>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-s text-gray-700">
                     <span className="font-semibold">Tipo de apoyo:</span>{" "}
                     {selectedProject.apoyo || "Sin información"}{" "}
                     {selectedProject.detalle_apoyo &&
@@ -595,59 +587,55 @@ export default function VisualizacionPage() {
                 </div>
 
                 {/* Información de Postulación */}
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-[#2E5C8A]" /> Información
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-[#2E5C8A]" /> Información
                     de Registro
                   </h4>
-                  <p className="text-sm text-gray-700 mb-1">
+                  <p className="text-s text-gray-700 mb-1">
                     <span className="font-semibold">Fecha de registro:</span>{" "}
                     {formatDateFull(selectedProject.fecha_postulacion)}
                   </p>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-s text-gray-700">
                     <span className="font-semibold">Convocatoria:</span>{" "}
                     {selectedProject.nombre_convo || "Sin información"}{" "}
                     {selectedProject.convocatoria &&
                     selectedProject.convocatoria !== ""
                       ? `(${selectedProject.convocatoria})`
-                      : ""}{" "}
-                    {/* Solo muestra si existe y no es una cadena vacía */}
+                      : ""}
                   </p>
                 </div>
               </div>
 
               {/* Columna Derecha: Académicos Involucrados */}
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-[#2E5C8A]" />{" "}
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-[#2E5C8A]" />
                   Académicos Involucrados
                 </h4>
                 {loadingFotos ? (
-                  <div className="flex justify-center items-center h-24">
-                    <Spinner size={32} className="text-[#2E5C8A]" />
+                  <div className="flex justify-center items-center h-16">
+                    <Spinner size={24} className="text-[#2E5C8A]" />
                   </div>
                 ) : academicosFotos.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center">
+                  <p className="text-s text-gray-500 text-center">
                     No hay fotos de académicos disponibles.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-1 gap-y-4">
-                    {" "}
-                    {/* Aumentar columnas para aprovechar espacio */}
-                    {/* Renderizar fotos y nombres */}
+                  <div className="grid grid-cols-1 gap-y-2">
                     {academicosMap[
                       selectedProject.id_proyecto
-                    ]?.profesores?.map((academico, index) => (
+                    ]?.profesores?.map((academico) => (
                       <div
                         key={academico.id_academico}
-                        className="flex items-center gap-3"
+                        className="flex items-center gap-2"
                       >
                         <img
                           src={academicosFotos[academico.id_academico]}
-                          alt={`Foto de ${academico.nombre_completo || "académico"}`} // Alt text descriptivo
-                          className="w-24 h-24 object-cover rounded-full border-2 border-gray-200 flex-shrink-0"
+                          alt={`Foto de ${academico.nombre_completo || "académico"}`}
+                          className="w-16 h-16 object-cover rounded-full border border-gray-200 flex-shrink-0"
                         />
-                        <p className="text-sm font-medium text-gray-800 leading-tight">
+                        <p className="text-s font-medium text-gray-800 leading-tight">
                           {academico.nombre_completo}
                         </p>
                       </div>

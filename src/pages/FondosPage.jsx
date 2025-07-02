@@ -1,19 +1,31 @@
 // src/pages/FondosConcursablesPage.jsx
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
-  // Asegúrate de importar solo lo que realmente usas
   Search,
-  ChevronDown, // Usaremos ChevronDown para el selector, pero no en AccordionTrigger
+  ChevronDown, // Ya no la necesitamos importar explícitamente si Shadcn la inyecta
   Target,
   ClipboardList,
   Calendar,
   RotateCcw,
   XCircle,
+  Plus,
   Info,
+  Trash2,
 } from "lucide-react";
 
-// Importa los componentes de Accordion de Shadcn UI
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+import { Textarea } from "@/components/ui/textarea.jsx";
+
 import {
   Accordion,
   AccordionItem,
@@ -21,66 +33,102 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 
-import { Spinner } from "@/components/ui/spinner"; // Importa el Spinner de Shadcn
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Importa Alert de Shadcn
-import { Button } from "@/components/ui/button"; // Importa Button de Shadcn
-import { Input } from "@/components/ui/input"; // Importa Input de Shadcn
+import { Spinner } from "@/components/ui/spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"; // Importa Select de Shadcn
+} from "@/components/ui/select";
 
-import { useError } from "@/contexts/ErrorContext"; // Importa tu hook de error global
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-import fondosService from "../api/fondos.js"; // Importa el servicio de fondos
-import tipoConvocatoriaService from "../api/tipoconvocatoria.js"; // Importa el servicio de tipos de convocatoria
+import { useError } from "@/contexts/ErrorContext";
 
-// Importa los logos de las imágenes
+import fondosService from "../api/fondos.js";
+import tipoConvocatoriaService from "../api/tipoconvocatoria.js";
+
 import anidLogo from "../assets/tipos_convocatorias/anid_rojo_azul.png";
 import corfoLogo from "../assets/tipos_convocatorias/corfo2024.png";
 import goreLogo from "../assets/tipos_convocatorias/gore-valpo.jpg";
 import internasPucvLogo from "../assets/tipos_convocatorias/internaspucv.svg";
 import privadaLogo from "../assets/tipos_convocatorias/private.png";
 
-// Mapeo de tipos de fondo a sus logos
 const FONDO_LOGOS = {
   ANID: anidLogo,
   CORFO: corfoLogo,
   GORE: goreLogo,
   Internas: internasPucvLogo,
   PRIVADA: privadaLogo,
+  "Internas PUCV": internasPucvLogo,
 };
 
 export default function FondosPage() {
-  const [fondosData, setFondosData] = useState([]); // Almacenará los fondos reales de la API
-  const [loading, setLoading] = useState(true); // Estado de carga para la página
-  const [errorLocal, setErrorLocal] = useState(null); // Estado de error local para la página
-  const { setError: setErrorGlobal } = useError(); // Hook para mostrar errores globales
+  const [fondosData, setFondosData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorLocal, setErrorLocal] = useState(null);
+  const { setError: setErrorGlobal } = useError();
 
-  // Estados para los filtros
-  const [filterTipoFondo, setFilterTipoFondo] = useState("todos"); // Filtro por Tipo de Convocatoria (nombre)
-  const [filterTrl, setFilterTrl] = useState("todos"); // Filtro por TRL (valor numérico o "N/A" como string)
-  const [filterEstado, setFilterEstado] = useState("todos"); // Filtro por Estado (Vigente/Finalizado)
-  const [searchTerm, setSearchTerm] = useState(""); // Filtro por búsqueda de texto
-  // Mapas para IDs a Nombres (se llenarán desde la API para procesamiento de datos)
-  const [tipoConvocatoriaMap, setTipoConvocatoriaMap] = useState({}); // ID Tipo Conv -> Nombre
+  const [filterTipoFondo, setFilterTipoFondo] = useState("todos");
+  const [filterTrl, setFilterTrl] = useState("todos");
+  const [filterEstado, setFilterEstado] = useState("todos");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Helper para obtener el color del badge del Tipo de Fondo
+  const [tipoConvocatoriaMap, setTipoConvocatoriaMap] = useState({});
+  const [tiposConvocatoriaList, setTiposConvocatoriaList] = useState([]);
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newFondoName, setNewFondoName] = useState("");
+  const [newFondoInicio, setNewFondoInicio] = useState("");
+  const [newFondoCierre, setNewFondoCierre] = useState("");
+  const [newFondoFinanciamiento, setNewFondoFinanciamiento] = useState("");
+  const [newFondoPlazo, setNewFondoPlazo] = useState("");
+  const [newFondoObjetivo, setNewFondoObjetivo] = useState("");
+  const [newFondoTrl, setNewFondoTrl] = useState("");
+  const [newFondoReq, setNewFondoReq] = useState("");
+  const [newFondoTipo, setNewFondoTipo] = useState("");
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [fondoAEliminar, setFondoAEliminar] = useState(null);
+
+  const resetNewFondoForm = () => {
+    setNewFondoName("");
+    setNewFondoInicio("");
+    setNewFondoCierre("");
+    setNewFondoFinanciamiento("");
+    setNewFondoPlazo("");
+    setNewFondoObjetivo("");
+    setNewFondoTrl("");
+    setNewFondoReq("");
+    setNewFondoTipo("");
+  };
+
   const getTipoFondoColor = useCallback((tipoFondoNombre) => {
     switch (tipoFondoNombre) {
       case "ANID":
         return "bg-red-500 text-white";
       case "CORFO":
         return "bg-orange-500 text-white";
-      case "Internas PUCV":
+      case "Internas":
         return "bg-blue-500 text-white";
       case "GORE":
-        return "bg-purple-500 text-white"; // Si "GORE" es un nombre de tipo_convo
+        return "bg-purple-500 text-white";
       case "PRIVADA":
-        return "bg-gray-600 text-white"; // Si "PRIVADA" es un nombre de tipo_convo
+        return "bg-gray-600 text-white";
       default:
         return "bg-gray-500 text-white";
     }
@@ -97,7 +145,7 @@ export default function FondosPage() {
         />
       );
     }
-    return +(
+    return (
       <div className="h-5 w-5 flex items-center justify-center bg-gray-200 rounded-full text-gray-700 text-[0.7rem] font-bold flex-shrink-0">
         {tipoFondoNombre ? tipoFondoNombre.charAt(0) : "F"}
       </div>
@@ -109,7 +157,6 @@ export default function FondosPage() {
     return "bg-green-500 text-white";
   };
 
-  // Helper para formatear fechas del modal (si no lo tienes ya)
   const formatDate = useCallback((dateString) => {
     if (!dateString) return "Sin fecha";
     try {
@@ -123,22 +170,19 @@ export default function FondosPage() {
     }
   }, []);
 
-  // Helper para determinar si un fondo está vigente
   const isFondoVigente = useCallback((fondo) => {
     if (!fondo.inicio || !fondo.cierre) return false;
     const hoy = new Date();
     const inicio = new Date(fondo.inicio);
     const cierre = new Date(fondo.cierre);
-    cierre.setHours(23, 59, 59, 999); // Ajustar a fin del día para comparación inclusiva
+    cierre.setHours(23, 59, 59, 999);
     return hoy >= inicio && hoy <= cierre;
   }, []);
 
-  // Helper para obtener el color del badge de estado (Vigente/Finalizado)
   const getEstadoBadgeColor = useCallback((isVigente) => {
     return isVigente ? "bg-green-500 text-white" : "bg-red-500 text-white";
   }, []);
 
-  // --- Fetching de datos inicial ---
   const fetchAllFondosData = async () => {
     setLoading(true);
     setErrorLocal(null);
@@ -149,25 +193,23 @@ export default function FondosPage() {
         tipoConvocatoriaService.getAllTiposConvocatoria(),
       ]);
 
-      // Construir mapa ID Tipo Conv -> Nombre
-      const newTipoConvocatoriaMap = tiposConvocatoriaResponse.reduce(
-        (map, tipo) => {
-          map[tipo.id] = tipo.nombre;
-          return map;
-        },
-        {}
-      );
+      const newTipoConvocatoriaMap = {};
+      const newTiposConvocatoriaList = [];
+      tiposConvocatoriaResponse.forEach((tipo) => {
+        newTipoConvocatoriaMap[tipo.id] = tipo.nombre;
+        newTiposConvocatoriaList.push(tipo);
+      });
       setTipoConvocatoriaMap(newTipoConvocatoriaMap);
+      setTiposConvocatoriaList(newTiposConvocatoriaList);
 
-      // Procesar fondos: añadir el nombre del tipo de convocatoria y el estado de vigencia
       const processedFondos = fondosResponse.map((fondo) => {
-        const tipoNombre = newTipoConvocatoriaMap[fondo.tipo] || "Desconocido"; // Usamos fondo.tipo
+        const tipoNombre = newTipoConvocatoriaMap[fondo.tipo] || "Desconocido";
         const estadoVigente = isFondoVigente(fondo) ? "Vigente" : "Finalizado";
 
         return {
           ...fondo,
-          tipo_nombre: tipoNombre, // Nombre de la convocatoria (tipo de fondo)
-          estado_vigencia: estadoVigente, // "Vigente" o "Finalizado"
+          tipo_nombre: tipoNombre,
+          estado_vigencia: estadoVigente,
         };
       });
 
@@ -175,9 +217,12 @@ export default function FondosPage() {
     } catch (err) {
       console.error("Error fetching fondos data:", err);
       setErrorGlobal({
-        type: "error", // Forzar a tipo error si falló
+        type: "error",
         title: "Error al cargar los fondos.",
       });
+      setErrorLocal(
+        "No se pudieron cargar los fondos. Inténtelo de nuevo más tarde."
+      );
     } finally {
       setLoading(false);
     }
@@ -185,34 +230,132 @@ export default function FondosPage() {
 
   useEffect(() => {
     fetchAllFondosData();
-  }, []); // El array vacío asegura que se ejecute una sola vez al montar
+  }, []);
 
-  // --- Lógica de Filtrado ---
-  const filteredFondos = fondosData.filter((fondo) => {
-    const matchesTipoFondo =
-      filterTipoFondo === "todos" || fondo.tipo_nombre === filterTipoFondo;
-    // Manejar TRL que puede ser null o una cadena, y el filtro "N/A"
-    const matchesTrl =
-      filterTrl === "todos" ||
-      (fondo.trl !== null && String(fondo.trl) === filterTrl) ||
-      (filterTrl === "Sin información" && fondo.trl === null);
-    const matchesEstado =
-      filterEstado === "todos" || fondo.estado_vigencia === filterEstado;
-    const matchesSearch =
-      searchTerm === "" ||
-      fondo.nombre.toLowerCase().startsWith(searchTerm.toLowerCase());
+  const handleCreateFondo = async () => {
+    if (!newFondoName.trim()) {
+      setErrorLocal("El nombre del fondo es obligatorio.");
+      return;
+    }
+    if (!newFondoTipo) {
+      setErrorLocal("El tipo de fondo es obligatorio.");
+      return;
+    }
 
-    return matchesTipoFondo && matchesTrl && matchesEstado && matchesSearch;
-  });
+    setLoading(true);
+    setErrorLocal(null);
 
-  // Opciones únicas para Selects (basadas en los datos reales)
-  // uniqueTiposFondo se basa en `tipo_nombre` del fondo procesado
-  const uniqueTiposFondo = [...new Set(fondosData.map((f) => f.tipo_nombre))]
-    .filter(Boolean)
-    .sort();
-  // uniqueTRLs es fijo (1-9 y N/A) ya que los valores de TRL no se sacan de una tabla externa
-  const uniqueTRLs = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
-  // uniqueEstados son fijos (Vigente/Finalizado)
+    const dataToSend = {
+      nombre: newFondoName.trim(),
+      inicio: newFondoInicio || null,
+      cierre: newFondoCierre || null,
+      financiamiento: newFondoFinanciamiento.trim(),
+      plazo: newFondoPlazo.trim(),
+      objetivo: newFondoObjetivo.trim(),
+      trl: newFondoTrl !== "" ? Number(newFondoTrl) : null,
+      req: newFondoReq.trim(),
+      tipo: Number(newFondoTipo),
+      crl: null,
+      team: null,
+      brl: null,
+      iprl: null,
+      frl: null,
+    };
+
+    try {
+      await fondosService.crearFondo(dataToSend);
+      setTimeout(() => {
+        setErrorGlobal({
+          type: "success",
+          title: "Fondo creado exitosamente!",
+        });
+      }, 3000);
+      resetNewFondoForm();
+      setIsCreateModalOpen(false);
+      await fetchAllFondosData();
+    } catch (err) {
+      console.error("Error al crear fondo:", err);
+      setErrorLocal("Error al crear el fondo. Inténtalo de nuevo.");
+      setErrorGlobal({
+        type: "error",
+        title: "Error al crear fondo.",
+        description: "No se pudo crear el fondo. Inténtalo de nuevo más tarde.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteFondoConfirm = useCallback(async () => {
+    if (!fondoAEliminar) return;
+
+    setLoading(true);
+    setErrorLocal(null);
+
+    try {
+      await fondosService.eliminarFondo(fondoAEliminar.id);
+      console.log(
+        `Fondo ${fondoAEliminar.id} (${fondoAEliminar.nombre}) eliminado.`
+      );
+      setTimeout(() => {
+        setErrorGlobal({
+          type: "success",
+          title: "Fondo eliminado exitosamente!",
+        });
+      }, 3000);
+      setIsDeleteDialogOpen(false);
+      setFondoAEliminar(null);
+      await fetchAllFondosData();
+    } catch (err) {
+      console.error("Error al eliminar fondo:", err);
+      setErrorLocal("Error al eliminar el fondo. Inténtalo de nuevo.");
+      setErrorGlobal({
+        type: "error",
+        title: "Error al eliminar fondo.",
+        description:
+          "No se pudo eliminar el fondo. Inténtalo de nuevo más tarde.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [fondoAEliminar, setErrorGlobal]);
+
+  const filteredFondos = useMemo(() => {
+    return fondosData.filter((fondo) => {
+      const matchesTipoFondo =
+        filterTipoFondo === "todos" || fondo.tipo_nombre === filterTipoFondo;
+      const matchesTrl =
+        filterTrl === "todos" ||
+        (fondo.trl !== null && String(fondo.trl) === filterTrl) ||
+        (filterTrl === "Sin información" && fondo.trl === null);
+      const matchesEstado =
+        filterEstado === "todos" || fondo.estado_vigencia === filterEstado;
+      const matchesSearch =
+        searchTerm === "" ||
+        fondo.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+
+      return matchesTipoFondo && matchesTrl && matchesEstado && matchesSearch;
+    });
+  }, [fondosData, filterTipoFondo, filterTrl, filterEstado, searchTerm]);
+
+  const uniqueTiposFondo = useMemo(() => {
+    return [...new Set(fondosData.map((f) => f.tipo_nombre))]
+      .filter(Boolean)
+      .sort();
+  }, [fondosData]);
+
+  const uniqueTRLs = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "Sin información",
+  ];
   const uniqueEstados = ["Vigente", "Finalizado"];
 
   const resetFilters = () => {
@@ -226,118 +369,139 @@ export default function FondosPage() {
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Título principal */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">
-            Fondos Concursables
-          </h2>
-          <p className="text-gray-600 mt-2">
-            Explora y gestiona todas las convocatorias disponibles para
-            financiar tus proyectos
-          </p>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900">
+              Fondos Concursables
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Explora y gestiona todas las convocatorias disponibles para
+              financiar tus proyectos
+            </p>
+          </div>
+          {/* Botón para crear fondo */}
+          <Button
+            className="bg-blue-600  cursor-pointer text-white hover:bg-blue-700"
+            onClick={() => {
+              resetNewFondoForm();
+              setIsCreateModalOpen(true);
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Crear Fondo
+          </Button>
         </div>
 
         {/* Filtros */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {/* Tipo de Fondo */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="filterTipoFondo"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 TIPO DE FONDO:
               </label>
-              <div className="relative">
-                <Select
-                  value={filterTipoFondo}
-                  onValueChange={setFilterTipoFondo}
-                >
-                  <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    {uniqueTiposFondo.map((tipo) => (
-                      <SelectItem key={tipo} value={tipo}>
-                        {tipo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select
+                value={filterTipoFondo}
+                onValueChange={setFilterTipoFondo}
+              >
+                <SelectTrigger id="filterTipoFondo" className="w-full">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {uniqueTiposFondo.map((tipo) => (
+                    <SelectItem key={tipo} value={tipo}>
+                      {tipo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* TRL */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="filterTrl"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 TRL:
               </label>
-              <div className="relative">
-                <Select value={filterTrl} onValueChange={setFilterTrl}>
-                  <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    {uniqueTRLs.map((trl) => (
-                      <SelectItem key={trl} value={trl}>
-                        {trl}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={filterTrl} onValueChange={setFilterTrl}>
+                <SelectTrigger id="filterTrl" className="w-full">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {uniqueTRLs.map((trl) => (
+                    <SelectItem key={trl} value={trl}>
+                      {trl}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Estado */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="filterEstado"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 ESTADO:
               </label>
-              <div className="relative">
-                <Select value={filterEstado} onValueChange={setFilterEstado}>
-                  <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    {uniqueEstados.map((estado) => (
-                      <SelectItem key={estado} value={estado}>
-                        {estado}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Botón Reiniciar */}
-            <div className="flex items-end">
-              <Button
-                onClick={resetFilters}
-                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Reiniciar Filtros
-              </Button>
+              <Select value={filterEstado} onValueChange={setFilterEstado}>
+                <SelectTrigger id="filterEstado" className="w-full">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {uniqueEstados.map((estado) => (
+                    <SelectItem key={estado} value={estado}>
+                      {estado}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Búsqueda */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                &nbsp;
+            <div className="col-span-full sm:col-span-2 md:col-span-1 lg:col-span-2 xl:col-span-1">
+              <label
+                htmlFor="searchTerm"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                BUSCAR:
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
+                  id="searchTerm"
                   type="text"
                   placeholder="Buscar por nombre"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4"
                 />
               </div>
+            </div>
+
+            {/* Botón Reiniciar Filtros */}
+            <div className="col-span-full sm:col-span-2 md:col-span-3 lg:col-span-1 flex items-end justify-end">
+              <Button
+                onClick={resetFilters}
+                className="w-full md:w-auto px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reiniciar Filtros
+              </Button>
             </div>
           </div>
         </div>
 
-        {/* Loading / Error / No Results - AÑADIR TODO ESTE BLOQUE AQUÍ */}
+        {/* Loading / Error / No Results */}
         {loading ? (
           <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow-sm">
             <Spinner size={48} className="text-blue-600 mb-4" />
@@ -361,28 +525,24 @@ export default function FondosPage() {
           </Alert>
         ) : (
           <>
-            {" "}
-            {/* Fragment para envolver los dos divs siguientes (Headers y Lista) */}
             {/* Headers de columna */}
             <div className="bg-white rounded-t-lg shadow-lg hidden md:block">
-              <div className="grid grid-cols-6 gap-4 p-4 bg-gray-100 border-b border-gray-200 font-semibold text-gray-700 text-sm items-center">
-                <div className="text-center">Nombre del Fondo</div>{" "}
-                {/* Alineado a la izquierda */}
-                <div className="text-center">Tipo de Fondo</div>{" "}
-                {/* Alineado al centro */}
-                <div className="text-center">TRL</div>{" "}
-                {/* Alineado al centro */}
-                <div className="text-center">Financiamiento</div>{" "}
-                {/* Alineado a la derecha */}
-                <div className="text-center">Duración</div>{" "}
-                {/* Alineado al centro */}
-                <div className="text-center">Estado</div>{" "}
-                {/* Alineado al centro */}
+              {/* Ajustamos el grid-cols para dar espacio a la flecha y el botón */}
+              <div className="grid grid-cols-[1fr_0.8fr_0.5fr_0.8fr_0.8fr_0.8fr_auto_auto] gap-4 p-4 bg-gray-100 border-b border-gray-200 font-semibold text-gray-700 text-sm items-center">
+                <div className="text-left">Nombre del Fondo</div>
+                <div className="text-center">Tipo de Fondo</div>
+                <div className="text-center">TRL</div>
+                <div className="text-center">Financiamiento</div>
+                <div className="text-center">Duración</div>
+                <div className="text-center">Estado</div>
+                <div className="text-center"></div>{" "}
+                {/* Columna para la flecha */}
+                <div className="text-center"></div>{" "}
+                {/* Columna para el botón */}
               </div>
             </div>
             {/* Lista de fondos */}
-            <div className="bg-white rounded-b-lg shadow-lg overflow-hidden px-4">
-              {/* El componente Accordion principal */}
+            <div className="bg-white rounded-b-lg shadow-lg overflow-hidden">
               <Accordion type="single" collapsible className="w-full">
                 {filteredFondos.map((fondo) => (
                   <AccordionItem
@@ -390,125 +550,110 @@ export default function FondosPage() {
                     key={fondo.id}
                     className="border-b border-gray-200"
                   >
-                    <AccordionTrigger>
-                      {/* Aquí puedes poner un solo <div> o incluso directamente los <span> y <div> de las columnas */}
-                      {/* Versión escritorio */}
-                      <div className="hidden md:grid grid-cols-6 gap-4 w-full items-center py-2">
-                        <div className="text-left flex items-center gap-2">
-                          {renderTipoFondoLogo(fondo.tipo_nombre)}
-                          <span className="font-medium text-gray-900">
-                            {fondo.nombre}
-                          </span>
-                        </div>
-                        {/* Columna de Tipo de Fondo (nombre de la convocatoria) */}
-                        <div className="text-center">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${getTipoFondoColor(fondo.tipo_nombre)}`}
-                          >
-                            {fondo.tipo_nombre}
-                          </span>
-                        </div>
-                        {/* TRL */}
-                        <div className="text-center">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${getTRLColor(fondo.trl === null ? "Sin información" : String(fondo.trl))}`}
-                          >
-                            {fondo.trl === null
-                              ? "Sin información"
-                              : `TRL ${fondo.trl}`}
-                          </span>
-                        </div>
-                        <div className="text-center text-gray-700 font-medium">
-                          {fondo.financiamiento || "Sin información"}
-                        </div>
-                        <div className="text-center text-gray-700">
-                          {fondo.plazo || "Sin información"}
-                        </div>
-                        <div className="text-center">
-                          {" "}
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-bold ${getEstadoBadgeColor(fondo.estado_vigencia === "Vigente")}`}
-                          >
-                            {fondo.estado_vigencia}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Versión móvil (visible solo en móviles) */}
-                      <div className="block md:hidden w-full text-left space-y-1">
-                        <div className="font-semibold text-gray-900 flex items-center gap-2">
-                          {renderTipoFondoLogo(fondo.tipo_nombre)}
+                    {/* Fila principal */}
+                    <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1fr_auto] items-center py-2 px-6 gap-4 group hover:bg-gray-50 transition-colors">
+                      <AccordionTrigger className="flex items-center gap-2 text-left">
+                        {renderTipoFondoLogo(fondo.tipo_nombre)}
+                        <span className="font-medium text-gray-900 line-clamp-1">
                           {fondo.nombre}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Tipo:{" "}
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${getTipoFondoColor(fondo.tipo_nombre)}`}
-                          >
-                            {fondo.tipo_nombre}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Estado:{" "}
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${getEstadoBadgeColor(fondo.estado_vigencia === "Vigente")}`}
-                          >
-                            {fondo.estado_vigencia}
-                          </span>
-                        </div>
+                        </span>
+                      </AccordionTrigger>
+                      <div className="text-center">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${getTipoFondoColor(fondo.tipo_nombre)}`}
+                        >
+                          {fondo.tipo_nombre}
+                        </span>
                       </div>
-                    </AccordionTrigger>
-                    {/* AccordionContent es el detalle que se expande */}
-                    <AccordionContent className="bg-gray-50 p-6 border-t border-gray-200">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Objetivo */}
-                        <div>
-                          <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                            <Target className="w-4 h-4 mr-2 text-gray-600" />
-                            Objetivo:
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            {fondo.objetivo ||
-                              "No se ha especificado el objetivo para este fondo."}
-                          </p>
-                        </div>
-
-                        {/* Requisitos */}
-                        <div>
-                          <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                            <ClipboardList className="w-4 h-4 mr-2 text-gray-600" />
-                            Requisitos:
-                          </h4>
-                          {fondo.req && fondo.req !== "" ? (
-                            <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                              {/* Ajuste para requisitos: Dividir por saltos de línea y filtrar vacíos */}
-                              {fondo.req
-                                .split(/[\r\n]/)
-                                .map((req, i) =>
-                                  req.trim() ? (
-                                    <li key={i}>{req.trim()}</li>
-                                  ) : null
-                                )}
-                            </ul>
-                          ) : (
-                            <p className="text-sm text-gray-600">
-                              No hay requisitos detallados disponibles.
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Fechas Importantes */}
-                        <div className="md:col-span-2">
-                          <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
-                            <Calendar className="w-4 h-4 mr-2 text-gray-600" />
-                            Fechas Importantes:
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            Inicio: {formatDate(fondo.inicio)}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Cierre: {formatDate(fondo.cierre)}
-                          </p>
+                      <div className="text-center">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${getTRLColor(fondo.trl === null ? "Sin información" : String(fondo.trl))}`}
+                        >
+                          {fondo.trl === null
+                            ? "Sin información"
+                            : `TRL ${fondo.trl}`}
+                        </span>
+                      </div>
+                      <div className="text-center text-gray-700 font-medium line-clamp-1">
+                        {fondo.financiamiento || "Sin información"}
+                      </div>
+                      <div className="text-center text-gray-700 line-clamp-1">
+                        {fondo.plazo || "Sin información"}
+                      </div>
+                      <div className="text-center">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold ${getEstadoBadgeColor(fondo.estado_vigencia === "Vigente")}`}
+                        >
+                          {fondo.estado_vigencia}
+                        </span>
+                      </div>
+                      <div className="flex justify-center items-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-500 hover:bg-red-50/20 hover:text-red-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFondoAEliminar(fondo);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </div>
+                    {/* Contenido expandido alineado */}
+                    <AccordionContent asChild>
+                      <div className="grid grid-cols-[1.5fr_1fr_1fr_1fr_1fr_1fr_auto]">
+                        <div className="col-span-7 bg-gray-50 p-6 border-t border-gray-200">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Objetivo */}
+                            <div>
+                              <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                                <Target className="w-4 h-4 mr-2 text-gray-600" />
+                                Objetivo:
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                {fondo.objetivo ||
+                                  "No se ha especificado el objetivo para este fondo."}
+                              </p>
+                            </div>
+                            {/* Requisitos */}
+                            <div>
+                              <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                                <ClipboardList className="w-4 h-4 mr-2 text-gray-600" />
+                                Requisitos:
+                              </h4>
+                              {fondo.req && fondo.req !== "" ? (
+                                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                                  {fondo.req
+                                    .split(/[\r\n]/)
+                                    .map((req, i) =>
+                                      req.trim() ? (
+                                        <li key={i}>{req.trim()}</li>
+                                      ) : null
+                                    )}
+                                </ul>
+                              ) : (
+                                <p className="text-sm text-gray-600">
+                                  No hay requisitos detallados disponibles.
+                                </p>
+                              )}
+                            </div>
+                            {/* Fechas Importantes */}
+                            <div className="md:col-span-2">
+                              <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                                <Calendar className="w-4 h-4 mr-2 text-gray-600" />
+                                Fechas Importantes:
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                Inicio: {formatDate(fondo.inicio)}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Cierre: {formatDate(fondo.cierre)}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </AccordionContent>
@@ -519,6 +664,186 @@ export default function FondosPage() {
           </>
         )}
       </div>
+
+      {/* Modal para Crear Fondo */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="w-full max-w-[95vw] md:max-w-[900px] h-[95vh] overflow-y-auto rounded-lg p-4">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Fondo Concursable</DialogTitle>
+            <DialogDescription>
+              Introduce los detalles del nuevo fondo concursable.
+              <span className="text-red-500 font-bold"> *</span> Campos
+              obligatorios.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* Nombre del Fondo */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="newFondoName" className="text-right">
+                Nombre del Fondo <span className="text-red-500">*</span>
+              </label>
+              <Input
+                id="newFondoName"
+                value={newFondoName}
+                onChange={(e) => setNewFondoName(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+
+            {/* Tipo de Fondo (Select) */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="newFondoTipo" className="text-right">
+                Tipo de Convocatoria <span className="text-red-500">*</span>
+              </label>
+              <Select value={newFondoTipo} onValueChange={setNewFondoTipo}>
+                <SelectTrigger id="newFondoTipo" className="col-span-3">
+                  <SelectValue placeholder="Selecciona un tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiposConvocatoriaList.map((tipo) => (
+                    <SelectItem key={tipo.id} value={String(tipo.id)}>
+                      {tipo.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Fechas de Inicio y Cierre */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="newFondoInicio" className="text-right">
+                Fecha de Inicio
+              </label>
+              <Input
+                id="newFondoInicio"
+                type="date"
+                value={newFondoInicio}
+                onChange={(e) => setNewFondoInicio(e.target.value)}
+                className="col-span-3"
+              />
+              <label htmlFor="newFondoCierre" className="text-right">
+                Fecha de Cierre
+              </label>
+              <Input
+                id="newFondoCierre"
+                type="date"
+                value={newFondoCierre}
+                onChange={(e) => setNewFondoCierre(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+
+            {/* Financiamiento y Plazo */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="newFondoFinanciamiento" className="text-right">
+                Financiamiento
+              </label>
+              <Input
+                id="newFondoFinanciamiento"
+                value={newFondoFinanciamiento}
+                onChange={(e) => setNewFondoFinanciamiento(e.target.value)}
+                className="col-span-3"
+              />
+              <label htmlFor="newFondoPlazo" className="text-right">
+                Plazo
+              </label>
+              <Input
+                id="newFondoPlazo"
+                value={newFondoPlazo}
+                onChange={(e) => setNewFondoPlazo(e.target.value)}
+                className="col-span-3"
+              />
+            </div>
+
+            {/* Objetivo */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="newFondoObjetivo" className="text-right">
+                Objetivo
+              </label>
+              <Textarea
+                id="newFondoObjetivo"
+                value={newFondoObjetivo}
+                onChange={(e) => setNewFondoObjetivo(e.target.value)}
+                className="col-span-3 min-h-[80px]"
+              />
+            </div>
+
+            {/* TRL y Requisitos */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="newFondoTrl" className="text-right">
+                TRL
+              </label>
+              <Select value={newFondoTrl} onValueChange={setNewFondoTrl}>
+                <SelectTrigger id="newFondoTrl" className="col-span-3">
+                  <SelectValue placeholder="Selecciona TRL" />
+                </SelectTrigger>
+                <SelectContent>
+                  {uniqueTRLs.map((trl) => (
+                    <SelectItem key={trl} value={trl}>
+                      {trl}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <label htmlFor="newFondoReq" className="text-right">
+                Requisitos (separados por línea)
+              </label>
+              <Textarea
+                id="newFondoReq"
+                value={newFondoReq}
+                onChange={(e) => setNewFondoReq(e.target.value)}
+                className="col-span-3 min-h-[40px]"
+              />
+            </div>
+
+            {errorLocal && (
+              <Alert variant="destructive" className="bg-red-50 text-red-700">
+                <XCircle className="h-5 w-5 mr-4" />
+                <AlertTitle>Error de formulario</AlertTitle>
+                <AlertDescription>{errorLocal}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsCreateModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" onClick={handleCreateFondo}>
+              Crear Fondo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AlertDialog para confirmación de eliminación */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente
+              el fondo{" "}
+              <strong>“{fondoAEliminar?.nombre || "seleccionado"}”</strong> de
+              nuestros servidores.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFondoConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

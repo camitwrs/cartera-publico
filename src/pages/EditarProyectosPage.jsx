@@ -835,7 +835,8 @@ export default function EditarProyectosPage() {
               Cartera de Proyectos
             </h1>
             <p className="text-gray-600">
-              Los cambios se guardan automáticamente al editar cada celda.
+              Edite directamente sobre las celdas. Los cambios se guardan
+              automáticamente.
             </p>
           </div>
           <div className="flex space-x-3">

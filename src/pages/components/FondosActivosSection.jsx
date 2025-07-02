@@ -189,7 +189,7 @@ export default function FondosActivosSection() {
               {/* Solo renderiza el logo/iniciales */}
               {renderFondoIconOrLogo(fondo["tipo de fondo"])}
 
-              <div className="flex-grow">
+              <div className="flex-grow ">
                 <h4 className="font-medium text-gray-900 text-base leading-tight">
                   {fondo.nombre}
                 </h4>
@@ -200,8 +200,8 @@ export default function FondosActivosSection() {
                   </p>
                 )}
 
-                <div className="flex flex-col justify-between w-full text-xs text-gray-600 mb-1">
-                  <div className="flex items-center">
+                <div className="flexflex-col justify-between w-full text-xs text-gray-600 mb-1">
+                  <div className="flex items-center ">
                     <Calendar className="h-3 w-3 text-gray-400 mr-1" />
                     <span>Cierre: {formatDate(fondo.cierre)}</span>
                   </div>
@@ -214,7 +214,7 @@ export default function FondosActivosSection() {
                   )}
                 </div>
 
-                <p className="text-xs font-semibold text-green-600 flex items-center gap-1">
+                <p className="text-xs mt-1 font-semibold text-green-600 flex items-center gap-1">
                   <DollarSign className="h-3 w-3 text-green-500" />
                   {fondo.financiamiento || "Monto no especificado"}
                 </p>
