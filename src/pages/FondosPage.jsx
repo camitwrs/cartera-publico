@@ -1,84 +1,120 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+// src/pages/FondosConcursablesPage.jsx
+
+import { useState, useCallback, useEffect } from "react";
 import {
-  BarChart3,
+  // Asegúrate de importar solo lo que realmente usas
+  Search,
+  ChevronDown, // Usaremos ChevronDown para el selector, pero no en AccordionTrigger
+  Target,
+  ClipboardList,
   Calendar,
-  ChevronDown,
-  Download,
-  FileText,
-  Filter,
-  Home,
-  PieChart,
-  School,
-  User,
-  Users,
+  RotateCcw,
   XCircle,
-  List,
   Info,
-  Trash2, // Importamos el icono de la papelera
 } from "lucide-react";
 
-import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+// Importa los componentes de Accordion de Shadcn UI
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+
+import { Spinner } from "@/components/ui/spinner"; // Importa el Spinner de Shadcn
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Importa Alert de Shadcn
+import { Button } from "@/components/ui/button"; // Importa Button de Shadcn
+import { Input } from "@/components/ui/input"; // Importa Input de Shadcn
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-// Importar componentes de Shadcn UI para el diálogo de alerta
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/select"; // Importa Select de Shadcn
 
-import { useError } from "@/contexts/ErrorContext";
+import { useError } from "@/contexts/ErrorContext"; // Importa tu hook de error global
 
-import respuestasCuestionarioService from "../api/respuestas-cuestionario.js";
-import academicosService from "../api/academicos.js";
-import unidadesAcademicasService from "../api/unidadesacademicas.js";
-import cuestionariosService from "../api/cuestionarios.js";
+import fondosService from "../api/fondos.js"; // Importa el servicio de fondos
+import tipoConvocatoriaService from "../api/tipoconvocatoria.js"; // Importa el servicio de tipos de convocatoria
 
-export default function FormulariosPage() {
-  // Estados para los datos reales de la API
-  const [respuestasData, setRespuestasData] = useState([]); // Todas las respuestas del cuestionario
-  const [preguntasData, setPreguntasData] = useState({}); // Preguntas del cuestionario (ahora como objeto/map)
+// Importa los logos de las imágenes
+import anidLogo from "../assets/tipos_convocatorias/anid_rojo_azul.png";
+import corfoLogo from "../assets/tipos_convocatorias/corfo2024.png";
+import goreLogo from "../assets/tipos_convocatorias/gore-valpo.jpg";
+import internasPucvLogo from "../assets/tipos_convocatorias/internaspucv.svg";
+import privadaLogo from "../assets/tipos_convocatorias/private.png";
 
-  // Mapas para IDs a Nombres
-  const [academicosMap, setAcademicosMap] = useState({}); // id_academico -> {nombre_completo, ...}
-  const [unidadesMap, setUnidadesMap] = useState({}); // id_unidad -> {nombre, ...}
+// Mapeo de tipos de fondo a sus logos
+const FONDO_LOGOS = {
+  ANID: anidLogo,
+  CORFO: corfoLogo,
+  GORE: goreLogo,
+  Internas: internasPucvLogo,
+  PRIVADA: privadaLogo,
+};
 
-  // Estados de carga y error
-  const [loading, setLoading] = useState(true);
-  const [errorLocal, setErrorLocal] = useState(null);
-  const { setError: setErrorGlobal } = useError();
+export default function FondosPage() {
+  const [fondosData, setFondosData] = useState([]); // Almacenará los fondos reales de la API
+  const [loading, setLoading] = useState(true); // Estado de carga para la página
+  const [errorLocal, setErrorLocal] = useState(null); // Estado de error local para la página
+  const { setError: setErrorGlobal } = useError(); // Hook para mostrar errores globales
 
-  const [filtroAcademico, setFiltroAcademico] = useState("todos"); // Valor "todos" para select
-  const [filtroEscuela, setFiltroEscuela] = useState("todos"); // Valor "todos" para select
-  const [filtroFecha, setFiltroFecha] = useState(""); // Fecha en formato YYYY-MM-DD
-  const [respuestaSeleccionadaId, setRespuestaSeleccionadaId] = useState(null); // No seleccionar nada al inicio
+  // Estados para los filtros
+  const [filterTipoFondo, setFilterTipoFondo] = useState("todos"); // Filtro por Tipo de Convocatoria (nombre)
+  const [filterTrl, setFilterTrl] = useState("todos"); // Filtro por TRL (valor numérico o "N/A" como string)
+  const [filterEstado, setFilterEstado] = useState("todos"); // Filtro por Estado (Vigente/Finalizado)
+  const [searchTerm, setSearchTerm] = useState(""); // Filtro por búsqueda de texto
+  // Mapas para IDs a Nombres (se llenarán desde la API para procesamiento de datos)
+  const [tipoConvocatoriaMap, setTipoConvocatoriaMap] = useState({}); // ID Tipo Conv -> Nombre
 
-  // --- Estados para el AlertDialog de eliminación ---
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [respuestaAEliminarId, setRespuestaAEliminarId] = useState(null);
-  const [nombreAcademicoAEliminar, setNombreAcademicoAEliminar] = useState(""); // Para mostrar en el diálogo
+  // Helper para obtener el color del badge del Tipo de Fondo
+  const getTipoFondoColor = useCallback((tipoFondoNombre) => {
+    switch (tipoFondoNombre) {
+      case "ANID":
+        return "bg-red-500 text-white";
+      case "CORFO":
+        return "bg-orange-500 text-white";
+      case "Internas PUCV":
+        return "bg-blue-500 text-white";
+      case "GORE":
+        return "bg-purple-500 text-white"; // Si "GORE" es un nombre de tipo_convo
+      case "PRIVADA":
+        return "bg-gray-600 text-white"; // Si "PRIVADA" es un nombre de tipo_convo
+      default:
+        return "bg-gray-500 text-white";
+    }
+  }, []);
 
-  // --- Funciones Helper ---
-  // Formatear fecha para la UI
+  const renderTipoFondoLogo = useCallback((tipoFondoNombre) => {
+    const logoSrc = FONDO_LOGOS[tipoFondoNombre];
+    if (logoSrc) {
+      return (
+        <img
+          src={logoSrc}
+          alt={`${tipoFondoNombre} Logo`}
+          className="h-5 w-5 object-contain rounded-full border border-gray-200"
+        />
+      );
+    }
+    return +(
+      <div className="h-5 w-5 flex items-center justify-center bg-gray-200 rounded-full text-gray-700 text-[0.7rem] font-bold flex-shrink-0">
+        {tipoFondoNombre ? tipoFondoNombre.charAt(0) : "F"}
+      </div>
+    );
+  }, []);
+
+  const getTRLColor = (trl) => {
+    if (trl === "Sin información") return "bg-gray-500 text-white";
+    return "bg-green-500 text-white";
+  };
+
+  // Helper para formatear fechas del modal (si no lo tienes ya)
   const formatDate = useCallback((dateString) => {
     if (!dateString) return "Sin fecha";
     try {
       const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "Fecha Inválida"; // Usa getTime() para NaN check
+      if (isNaN(date)) return "Fecha Inválida";
       const options = { year: "numeric", month: "long", day: "numeric" };
       return date.toLocaleDateString("es-CL", options);
     } catch (e) {
@@ -87,519 +123,402 @@ export default function FormulariosPage() {
     }
   }, []);
 
-  // Determinar si una fecha es "Hoy"
-  const isToday = useCallback((dateString) => {
-    if (!dateString) return false;
-    try {
-      const date = new Date(dateString);
-      const today = new Date();
-      return (
-        date.getFullYear() === today.getFullYear() &&
-        date.getMonth() === today.getMonth() &&
-        date.getDate() === today.getDate()
-      );
-    } catch (e) {
-      return false;
-    }
+  // Helper para determinar si un fondo está vigente
+  const isFondoVigente = useCallback((fondo) => {
+    if (!fondo.inicio || !fondo.cierre) return false;
+    const hoy = new Date();
+    const inicio = new Date(fondo.inicio);
+    const cierre = new Date(fondo.cierre);
+    cierre.setHours(23, 59, 59, 999); // Ajustar a fin del día para comparación inclusiva
+    return hoy >= inicio && hoy <= cierre;
   }, []);
 
-  const fetchData = async () => {
+  // Helper para obtener el color del badge de estado (Vigente/Finalizado)
+  const getEstadoBadgeColor = useCallback((isVigente) => {
+    return isVigente ? "bg-green-500 text-white" : "bg-red-500 text-white";
+  }, []);
+
+  // --- Fetching de datos inicial ---
+  const fetchAllFondosData = async () => {
     setLoading(true);
     setErrorLocal(null);
     setErrorGlobal(null);
     try {
-      // Realizar todas las llamadas a la API en paralelo
-      const [respuestasRes, academicosRes, unidadesRes, cuestionariosRes] =
-        await Promise.all([
-          respuestasCuestionarioService.getAllRespuestasCuestionario(),
-          academicosService.getAllAcademicos(),
-          unidadesAcademicasService.getAllUnidadesAcademicas(),
-          cuestionariosService.getAllCuestionarios(),
-        ]);
+      const [fondosResponse, tiposConvocatoriaResponse] = await Promise.all([
+        fondosService.getAllFondos(),
+        tipoConvocatoriaService.getAllTiposConvocatoria(),
+      ]);
 
-      // Procesar datos de académicos: id -> {nombre_completo, ...}
-      const newAcademicosMap = academicosRes.reduce((map, acad) => {
-        map[acad.id_academico] = {
-          ...acad,
-          nombre_completo:
-            `${acad.nombre} ${acad.a_paterno || ""} ${acad.a_materno || ""}`.trim(),
-        };
-        return map;
-      }, {});
-      setAcademicosMap(newAcademicosMap);
+      // Construir mapa ID Tipo Conv -> Nombre
+      const newTipoConvocatoriaMap = tiposConvocatoriaResponse.reduce(
+        (map, tipo) => {
+          map[tipo.id] = tipo.nombre;
+          return map;
+        },
+        {}
+      );
+      setTipoConvocatoriaMap(newTipoConvocatoriaMap);
 
-      // Procesar datos de unidades: id -> {nombre, ...}
-      const newUnidadesMap = unidadesRes.reduce((map, unidad) => {
-        map[unidad.id_unidad] = unidad;
-        return map;
-      }, {});
-      setUnidadesMap(newUnidadesMap); // Necesitarás este estado si quieres el nombre de la escuela
-
-      // Procesar preguntas: id -> pregunta (para fácil acceso)
-      const newPreguntasMap = cuestionariosRes.reduce((map, q) => {
-        map[q.id_pregunta] = q.pregunta; // Asumiendo que las preguntas tienen id_pregunta
-        return map;
-      }, {});
-      setPreguntasData(newPreguntasMap); // Guardar el mapa de preguntas
-
-      // Procesar respuestas: mapear IDs a nombres
-      const processedRespuestas = respuestasRes.map((res) => {
-        const academico = newAcademicosMap[res.nombre_investigador];
-        // Acceder a la unidad a través del campo 'escuela' de la respuesta, que es el ID de la unidad
-        const unidadAcademica = newUnidadesMap[res.escuela];
+      // Procesar fondos: añadir el nombre del tipo de convocatoria y el estado de vigencia
+      const processedFondos = fondosResponse.map((fondo) => {
+        const tipoNombre = newTipoConvocatoriaMap[fondo.tipo] || "Desconocido"; // Usamos fondo.tipo
+        const estadoVigente = isFondoVigente(fondo) ? "Vigente" : "Finalizado";
 
         return {
-          id: res.id, // ID de la respuesta
-          nombre: academico?.nombre_completo || "Desconocido",
-          escuela: unidadAcademica?.nombre || "Desconocida", // Nombre de la unidad/escuela
-          fecha: res.fecha_creacion, // Fecha en formato ISO string
-          // Mapear respuestas a las preguntas (asumiendo respuesta_1 a respuesta_9)
-          respuestas: Object.keys(res)
-            .filter((key) => key.startsWith("respuesta_"))
-            .map((key) => {
-              const preguntaNumero = parseInt(
-                key.replace("respuesta_", ""),
-                10
-              );
-              // Aquí la clave de la pregunta en newPreguntasMap debe coincidir con el número de la respuesta
-              // Si las preguntas en cuestionariosRes.id_cuestionario corresponden a 1, 2, 3...
-              const preguntaTexto =
-                newPreguntasMap[preguntaNumero] || `Pregunta ${preguntaNumero}`;
-              return {
-                numero: preguntaNumero,
-                texto: preguntaTexto,
-                respuesta: res[key] || "Sin respuesta", // La respuesta dada
-              };
-            })
-            .sort((a, b) => a.numero - b.numero), // Ordenar por número de pregunta
+          ...fondo,
+          tipo_nombre: tipoNombre, // Nombre de la convocatoria (tipo de fondo)
+          estado_vigencia: estadoVigente, // "Vigente" o "Finalizado"
         };
       });
 
-      setRespuestasData(processedRespuestas);
-      if (processedRespuestas.length > 0) {
-        setRespuestaSeleccionadaId(processedRespuestas[0].id); // Seleccionar la primera respuesta por defecto
-      }
+      setFondosData(processedFondos);
     } catch (err) {
-      console.error("Error fetching data for FormulariosPage:", err);
+      console.error("Error fetching fondos data:", err);
       setErrorGlobal({
         type: "error", // Forzar a tipo error si falló
-        title: "Error al cargar los formularios.",
+        title: "Error al cargar los fondos.",
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // Efecto para llamar a fetchData al montar el componente
   useEffect(() => {
-    fetchData();
+    fetchAllFondosData();
   }, []); // El array vacío asegura que se ejecute una sola vez al montar
 
-  // Manejador para abrir el diálogo de confirmación de eliminación
-  const handleOpenDeleteDialog = useCallback((respuestaId, nombreAcademico) => {
-    setRespuestaAEliminarId(respuestaId);
-    setNombreAcademicoAEliminar(nombreAcademico);
-    setIsDeleteDialogOpen(true);
-  }, []);
+  // --- Lógica de Filtrado ---
+  const filteredFondos = fondosData.filter((fondo) => {
+    const matchesTipoFondo =
+      filterTipoFondo === "todos" || fondo.tipo_nombre === filterTipoFondo;
+    // Manejar TRL que puede ser null o una cadena, y el filtro "N/A"
+    const matchesTrl =
+      filterTrl === "todos" ||
+      (fondo.trl !== null && String(fondo.trl) === filterTrl) ||
+      (filterTrl === "Sin información" && fondo.trl === null);
+    const matchesEstado =
+      filterEstado === "todos" || fondo.estado_vigencia === filterEstado;
+    const matchesSearch =
+      searchTerm === "" ||
+      fondo.nombre.toLowerCase().startsWith(searchTerm.toLowerCase());
 
-  // Manejador para la confirmación de eliminación
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!respuestaAEliminarId) return;
+    return matchesTipoFondo && matchesTrl && matchesEstado && matchesSearch;
+  });
 
-    try {
-      await respuestasCuestionarioService.eliminarRespuestaCuestionario(
-        respuestaAEliminarId
-      );
-      console.log(`Respuesta ${respuestaAEliminarId} eliminada.`);
-      // Actualizar la lista de respuestas en la UI
-      setRespuestasData((prevRespuestas) =>
-        prevRespuestas.filter((res) => res.id !== respuestaAEliminarId)
-      );
-      // Si la respuesta seleccionada era la eliminada, deseleccionar o seleccionar la primera disponible
-      if (respuestaSeleccionadaId === respuestaAEliminarId) {
-        setRespuestaSeleccionadaId(null); // Esto será manejado por el useEffect que auto-selecciona
-      }
-    } catch (err) {
-      console.error("Error al eliminar la respuesta:", err);
-      setErrorGlobal({
-        type: "error",
-        title: "Error al eliminar la respuesta.",
-        description:
-          "No se pudo eliminar la respuesta. Inténtalo de nuevo más tarde.",
-      });
-    } finally {
-      setIsDeleteDialogOpen(false); // Cerrar el diálogo
-      setRespuestaAEliminarId(null); // Limpiar el ID a eliminar
-      setNombreAcademicoAEliminar(""); // Limpiar el nombre
-    }
-  }, [respuestaAEliminarId, respuestaSeleccionadaId, setErrorGlobal]);
+  // Opciones únicas para Selects (basadas en los datos reales)
+  // uniqueTiposFondo se basa en `tipo_nombre` del fondo procesado
+  const uniqueTiposFondo = [...new Set(fondosData.map((f) => f.tipo_nombre))]
+    .filter(Boolean)
+    .sort();
+  // uniqueTRLs es fijo (1-9 y N/A) ya que los valores de TRL no se sacan de una tabla externa
+  const uniqueTRLs = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+  // uniqueEstados son fijos (Vigente/Finalizado)
+  const uniqueEstados = ["Vigente", "Finalizado"];
 
-  // Opciones únicas para los Selects de filtro (basadas en respuestasData)
-  const uniqueAcademicos = useMemo(() => {
-    const academics = [...new Set(respuestasData.map((r) => r.nombre))]
-      .filter(Boolean)
-      .sort();
-    return academics;
-  }, [respuestasData]);
-
-  const uniqueEscuelas = useMemo(() => {
-    const schools = [...new Set(respuestasData.map((r) => r.escuela))]
-      .filter(Boolean)
-      .sort();
-    return schools;
-  }, [respuestasData]);
-
-  // Esta es la versión CORRECTA de la lógica para el filtro
-  const respuestasFiltradas = useMemo(() => {
-    return respuestasData.filter((r) => {
-      const coincideAcademico =
-        filtroAcademico === "todos" || r.nombre === filtroAcademico;
-      const coincideEscuela =
-        filtroEscuela === "todos" || r.escuela === filtroEscuela;
-      const coincideFecha =
-        !filtroFecha || (r.fecha && r.fecha.startsWith(filtroFecha));
-
-      return coincideAcademico && coincideEscuela && coincideFecha;
-    });
-  }, [respuestasData, filtroAcademico, filtroEscuela, filtroFecha]);
-
-  // Si la respuesta seleccionada no está en las filtradas, o no hay nada seleccionado,
-  // selecciona la primera de las filtradas (o null si no hay ninguna)
-  const respuestaSeleccionada = useMemo(() => {
-    return (
-      respuestasFiltradas.find((r) => r.id === respuestaSeleccionadaId) ||
-      respuestasFiltradas[0] ||
-      null
-    );
-  }, [respuestasFiltradas, respuestaSeleccionadaId]);
-
-  // Efecto para actualizar `respuestaSeleccionadaId` si la `respuestaSeleccionada` cambia
-  // Esto asegura que la selección visual sea correcta después de filtrar.
-  useEffect(() => {
-    if (
-      respuestaSeleccionada &&
-      respuestaSeleccionada.id !== respuestaSeleccionadaId
-    ) {
-      setRespuestaSeleccionadaId(respuestaSeleccionada.id);
-    } else if (!respuestaSeleccionada && respuestaSeleccionadaId !== null) {
-      setRespuestaSeleccionadaId(null); // Si no hay respuesta seleccionada, resetear el ID.
-    }
-  }, [respuestaSeleccionada, respuestaSeleccionadaId]);
+  const resetFilters = () => {
+    setFilterTipoFondo("todos");
+    setFilterTrl("todos");
+    setFilterEstado("todos");
+    setSearchTerm("");
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Título principal */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">Formularios</h2>
+          <h2 className="text-3xl font-bold text-gray-900">
+            Fondos Concursables
+          </h2>
           <p className="text-gray-600 mt-2">
-            Revisa las respuestas de los formularios
+            Explora y gestiona todas las convocatorias disponibles para
+            financiar tus proyectos
           </p>
         </div>
 
         {/* Filtros */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <Filter className="h-5 w-5 text-gray-600" />
-                <span className="text-gray-700 font-medium">Filtrar por:</span>
-              </div>
-
-              {/* Filtro Académico */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+            {/* Tipo de Fondo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                TIPO DE FONDO:
+              </label>
               <div className="relative">
                 <Select
-                  value={filtroAcademico}
-                  onValueChange={setFiltroAcademico}
+                  value={filterTipoFondo}
+                  onValueChange={setFilterTipoFondo}
                 >
-                  <SelectTrigger className="px-2 w-50 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white min-w-48">
-                    <SelectValue placeholder="Todos los académicos" />
+                  <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todos">Todos los académicos</SelectItem>
-                    {uniqueAcademicos.map((nombre) => (
-                      <SelectItem key={nombre} value={nombre}>
-                        {nombre}
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {uniqueTiposFondo.map((tipo) => (
+                      <SelectItem key={tipo} value={tipo}>
+                        {tipo}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
-              {/* Filtro Escuela */}
+            {/* TRL */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                TRL:
+              </label>
               <div className="relative">
-                <Select value={filtroEscuela} onValueChange={setFiltroEscuela}>
-                  <SelectTrigger className="px-2 w-72 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white min-w-48">
-                    <SelectValue placeholder="Todas las escuelas" />
+                <Select value={filterTrl} onValueChange={setFilterTrl}>
+                  <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todos">Todas las escuelas</SelectItem>
-                    {uniqueEscuelas.map((escuela) => (
-                      <SelectItem key={escuela} value={escuela}>
-                        {escuela}
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {uniqueTRLs.map((trl) => (
+                      <SelectItem key={trl} value={trl}>
+                        {trl}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
-              {/* Filtro Fecha */}
+            {/* Estado */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                ESTADO:
+              </label>
               <div className="relative">
+                <Select value={filterEstado} onValueChange={setFilterEstado}>
+                  <SelectTrigger className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {uniqueEstados.map((estado) => (
+                      <SelectItem key={estado} value={estado}>
+                        {estado}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Botón Reiniciar */}
+            <div className="flex items-end">
+              <Button
+                onClick={resetFilters}
+                className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Reiniciar Filtros
+              </Button>
+            </div>
+
+            {/* Búsqueda */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                &nbsp;
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
-                  type="date"
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white min-w-48"
-                  value={filtroFecha}
-                  onChange={(e) => setFiltroFecha(e.target.value)}
+                  type="text"
+                  placeholder="Buscar por nombre"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
-
-            <div className="flex items-center space-x-3">
-              <Button
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                onClick={() => {
-                  setFiltroAcademico("todos");
-                  setFiltroEscuela("todos");
-                  setFiltroFecha("");
-                }}
-              >
-                Reiniciar filtros
-              </Button>
-              <Button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2">
-                <Download className="h-4 w-4" />
-                <span>Generar PDF</span>
-              </Button>
-            </div>
           </div>
         </div>
 
-        {/* Layout principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Lista de respuestas */}
-          <div className="bg-white rounded-lg shadow-lg ">
-            <div className="p-6 border-b border-gray-200 flex items-center space-x-3">
-              <List className="h-6 w-6 text-gray-600" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                Lista de respuestas
-              </h3>
+        {/* Loading / Error / No Results - AÑADIR TODO ESTE BLOQUE AQUÍ */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow-sm">
+            <Spinner size={48} className="text-blue-600 mb-4" />
+            <p className="text-lg text-gray-600">
+              Cargando fondos... Por favor, espere.
+            </p>
+          </div>
+        ) : errorLocal ? (
+          <Alert variant="destructive" className="bg-red-50 text-red-700">
+            <XCircle className="h-5 w-5 mr-4" />
+            <AlertTitle>Error al cargar fondos</AlertTitle>
+            <AlertDescription>{errorLocal}</AlertDescription>
+          </Alert>
+        ) : filteredFondos.length === 0 ? (
+          <Alert variant="default" className="bg-blue-50 text-blue-700">
+            <Info className="h-5 w-5 mr-4" />
+            <AlertTitle>No hay fondos</AlertTitle>
+            <AlertDescription>
+              No se encontraron fondos con los filtros o búsqueda actuales.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <>
+            {" "}
+            {/* Fragment para envolver los dos divs siguientes (Headers y Lista) */}
+            {/* Headers de columna */}
+            <div className="bg-white rounded-t-lg shadow-lg hidden md:block">
+              <div className="grid grid-cols-6 gap-4 p-4 bg-gray-100 border-b border-gray-200 font-semibold text-gray-700 text-sm items-center">
+                <div className="text-center">Nombre del Fondo</div>{" "}
+                {/* Alineado a la izquierda */}
+                <div className="text-center">Tipo de Fondo</div>{" "}
+                {/* Alineado al centro */}
+                <div className="text-center">TRL</div>{" "}
+                {/* Alineado al centro */}
+                <div className="text-center">Financiamiento</div>{" "}
+                {/* Alineado a la derecha */}
+                <div className="text-center">Duración</div>{" "}
+                {/* Alineado al centro */}
+                <div className="text-center">Estado</div>{" "}
+                {/* Alineado al centro */}
+              </div>
             </div>
-
-            <div className="divide-y divide-gray-200">
-              {loading ? (
-                <div className="flex justify-center items-center h-48 py-8">
-                  <Spinner size={32} className="text-[#2E5C8A]" />
-                </div>
-              ) : errorLocal ? (
-                <Alert
-                  variant="destructive"
-                  className="bg-red-50 text-red-700 mx-4 my-4"
-                >
-                  <XCircle className="h-5 w-5 mr-4" />
-                  <AlertTitle>Error al cargar respuestas</AlertTitle>
-                  <AlertDescription>{errorLocal}</AlertDescription>
-                </Alert>
-              ) : respuestasFiltradas.length === 0 ? (
-                <Alert
-                  variant="default"
-                  className="bg-blue-50 text-blue-700 mx-4 my-4"
-                >
-                  <Info className="h-5 w-5 mr-4" />
-                  <AlertTitle>No hay respuestas</AlertTitle>
-                  <AlertDescription>
-                    No se encontraron respuestas con los filtros actuales.
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                respuestasFiltradas.map((respuesta) => (
-                  <div
-                    key={respuesta.id}
-                    // Deshabilitar la selección si el diálogo de eliminación está abierto para evitar conflictos
-                    onClick={
-                      isDeleteDialogOpen
-                        ? undefined
-                        : () => setRespuestaSeleccionadaId(respuesta.id)
-                    }
-                    className={`p-6 cursor-pointer transition-colors flex items-center justify-between ${
-                      respuestaSeleccionadaId === respuesta.id
-                        ? "bg-blue-50 border-l-4 border-blue-500"
-                        : "hover:bg-gray-50 border-l-4 border-transparent"
-                    }`}
+            {/* Lista de fondos */}
+            <div className="bg-white rounded-b-lg shadow-lg overflow-hidden px-4">
+              {/* El componente Accordion principal */}
+              <Accordion type="single" collapsible className="w-full">
+                {filteredFondos.map((fondo) => (
+                  <AccordionItem
+                    value={`item-${fondo.id}`}
+                    key={fondo.id}
+                    className="border-b border-gray-200"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        {/* Botón de eliminar para cada respuesta */}
-
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <h4 className="text-lg font-semibold text-gray-900">
-                              {respuesta.nombre}
-                            </h4>
-                            {isToday(respuesta.fecha) && (
-                              <span className="px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
-                                Hoy
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                              <School className="h-4 w-4" />
-                              <span>Escuela: {respuesta.escuela}</span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                              <Calendar className="h-4 w-4" />
-                              <span>{formatDate(respuesta.fecha)}</span>
-                            </div>
-                          </div>
+                    <AccordionTrigger>
+                      {/* Aquí puedes poner un solo <div> o incluso directamente los <span> y <div> de las columnas */}
+                      {/* Versión escritorio */}
+                      <div className="hidden md:grid grid-cols-6 gap-4 w-full items-center py-2">
+                        <div className="text-left flex items-center gap-2">
+                          {renderTipoFondoLogo(fondo.tipo_nombre)}
+                          <span className="font-medium text-gray-900">
+                            {fondo.nombre}
+                          </span>
                         </div>
-                        <div>
-                          <Button
-                            variant="outline"
-                            className="text-red-500 hover:text-red-700  cursor-pointer mr-4 flex-shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation(); // Evita que la fila se seleccione
-                              handleOpenDeleteDialog(
-                                respuesta.id,
-                                respuesta.nombre
-                              );
-                            }}
+                        {/* Columna de Tipo de Fondo (nombre de la convocatoria) */}
+                        <div className="text-center">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${getTipoFondoColor(fondo.tipo_nombre)}`}
                           >
-                            Eliminar
-                            <Trash2 className="h-10 w-10" />
-                          </Button>
+                            {fondo.tipo_nombre}
+                          </span>
+                        </div>
+                        {/* TRL */}
+                        <div className="text-center">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${getTRLColor(fondo.trl === null ? "Sin información" : String(fondo.trl))}`}
+                          >
+                            {fondo.trl === null
+                              ? "Sin información"
+                              : `TRL ${fondo.trl}`}
+                          </span>
+                        </div>
+                        <div className="text-center text-gray-700 font-medium">
+                          {fondo.financiamiento || "Sin información"}
+                        </div>
+                        <div className="text-center text-gray-700">
+                          {fondo.plazo || "Sin información"}
+                        </div>
+                        <div className="text-center">
+                          {" "}
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${getEstadoBadgeColor(fondo.estado_vigencia === "Vigente")}`}
+                          >
+                            {fondo.estado_vigencia}
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
 
-          {/* Detalles de la respuesta */}
-          <div className="bg-white rounded-lg shadow-lg">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center space-x-3">
-                <User className="h-6 w-6 text-gray-600" />
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Detalles de la Respuesta
-                </h3>
-              </div>
-            </div>
-
-            {respuestaSeleccionada && (
-              <div className="p-6">
-                {/* Información del investigador */}
-                <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <User className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-600">
-                          Investigador:
-                        </span>
+                      {/* Versión móvil (visible solo en móviles) */}
+                      <div className="block md:hidden w-full text-left space-y-1">
+                        <div className="font-semibold text-gray-900 flex items-center gap-2">
+                          {renderTipoFondoLogo(fondo.tipo_nombre)}
+                          {fondo.nombre}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Tipo:{" "}
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${getTipoFondoColor(fondo.tipo_nombre)}`}
+                          >
+                            {fondo.tipo_nombre}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          Estado:{" "}
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-xs font-bold ${getEstadoBadgeColor(fondo.estado_vigencia === "Vigente")}`}
+                          >
+                            {fondo.estado_vigencia}
+                          </span>
+                        </div>
                       </div>
-                      <p className="font-semibold text-gray-900">
-                        {respuestaSeleccionada.nombre}
-                      </p>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <School className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-600">
-                          Escuela:
-                        </span>
-                      </div>
-                      <p className="font-semibold text-gray-900">
-                        {respuestaSeleccionada.escuela}
-                      </p>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <Calendar className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-600">
-                          Fecha:
-                        </span>
-                      </div>
-                      <p className="font-semibold text-gray-900">
-                        {formatDate(respuestaSeleccionada.fecha)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Respuestas del cuestionario */}
-                <div>
-                  <div className="flex items-center space-x-2 mb-4">
-                    <FileText className="h-5 w-5 text-gray-600" />
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      Respuestas del Cuestionario
-                    </h4>
-                  </div>
-
-                  <div className="space-y-6">
-                    {respuestaSeleccionada.respuestas.map((itemRespuesta) => (
-                      <div
-                        key={itemRespuesta.numero}
-                        className="border border-gray-200 rounded-lg p-4"
-                      >
-                        <div className="mb-3">
-                          <h5 className="font-semibold text-gray-900 mb-2">
-                            Pregunta {itemRespuesta.numero}
-                          </h5>
-                          <p className="text-gray-700 italic">
-                            {itemRespuesta.texto}
+                    </AccordionTrigger>
+                    {/* AccordionContent es el detalle que se expande */}
+                    <AccordionContent className="bg-gray-50 p-6 border-t border-gray-200">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Objetivo */}
+                        <div>
+                          <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                            <Target className="w-4 h-4 mr-2 text-gray-600" />
+                            Objetivo:
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            {fondo.objetivo ||
+                              "No se ha especificado el objetivo para este fondo."}
                           </p>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3">
-                          <p className="text-gray-500 italic">
-                            {itemRespuesta.respuesta || "Sin respuesta"}
+
+                        {/* Requisitos */}
+                        <div>
+                          <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                            <ClipboardList className="w-4 h-4 mr-2 text-gray-600" />
+                            Requisitos:
+                          </h4>
+                          {fondo.req && fondo.req !== "" ? (
+                            <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                              {/* Ajuste para requisitos: Dividir por saltos de línea y filtrar vacíos */}
+                              {fondo.req
+                                .split(/[\r\n]/)
+                                .map((req, i) =>
+                                  req.trim() ? (
+                                    <li key={i}>{req.trim()}</li>
+                                  ) : null
+                                )}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-gray-600">
+                              No hay requisitos detallados disponibles.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Fechas Importantes */}
+                        <div className="md:col-span-2">
+                          <h4 className="font-semibold text-gray-800 mb-2 flex items-center">
+                            <Calendar className="w-4 h-4 mr-2 text-gray-600" />
+                            Fechas Importantes:
+                          </h4>
+                          <p className="text-sm text-gray-600">
+                            Inicio: {formatDate(fondo.inicio)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Cierre: {formatDate(fondo.cierre)}
                           </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            {!respuestaSeleccionada && !loading && !errorLocal && (
-              <div className="p-6 text-gray-500">
-                Selecciona una respuesta de la lista para ver los detalles.
-              </div>
-            )}
-          </div>
-        </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
+          </>
+        )}
       </div>
-
-      {/* AlertDialog para confirmación de eliminación */}
-      <AlertDialog
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              ¿Estás seguro de eliminar esta respuesta?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará la respuesta del
-              formulario realizada por{" "}
-              <strong>“{nombreAcademicoAEliminar}”</strong>.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
